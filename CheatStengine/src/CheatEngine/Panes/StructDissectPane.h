@@ -1,0 +1,37 @@
+#pragma once
+
+#include <CheatEngine/Core/ModalManager.h>
+#include <CheatEngine/Panes/Pane.h>
+#include <CheatEngine/Tools/StructDissect.h>
+
+#include <Engine/Core/Core.h>
+
+struct AddElementPayload {
+    uintptr_t Offset;
+    Field& Field;
+};
+
+class StructDissectPane final : public Pane {
+public:
+    explicit StructDissectPane(State& state, ModalManager& modalManager);
+
+    void Draw() override;
+
+    void AddDissection(const std::string& name, uintptr_t address);
+
+private:
+    static std::string FormatFieldValue(const FieldValue& fieldValue, Field& field);
+
+    void DrawDissection(Dissection& dissection) const;
+    bool DrawField(Field& field, uintptr_t baseAddress, size_t depth = 0) const;
+
+    bool FieldContextMenu(
+        const std::string& label, Field& field,
+        uintptr_t address, const FieldValue& value) const;
+
+    void AddDissectionModal(const std::string& name, const std::any& payload);
+    void AddElementModal(const std::string& name, const std::any& payload);
+
+private:
+    ModalManager& m_ModalManager;
+};

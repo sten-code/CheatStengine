@@ -1,0 +1,7 @@
+CheatEngine/src/CheatEngine/Icons/
+cmake-build-debug/
+cmake-build-debug-msvc/
+cmake-build-release/
+cmake-build-release-msvc/
+.idea/
+.vs/
