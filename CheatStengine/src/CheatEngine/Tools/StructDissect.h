@@ -49,6 +49,7 @@ struct Field {
     bool Expanded = false;
 
     FieldValue ReadField(const Process& proc, uintptr_t baseAddress) const;
+    bool WriteField(const Process& proc, uintptr_t baseAddress, const FieldValue& value);
 };
 
 std::vector<Field> ExploreAddress(Process& proc, uintptr_t baseAddress, size_t size);

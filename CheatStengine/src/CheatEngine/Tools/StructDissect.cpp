@@ -172,6 +172,28 @@ FieldValue Field::ReadField(const Process& proc, uintptr_t baseAddress) const
     return {};
 }
 
+bool Field::WriteField(const Process& proc, uintptr_t baseAddress, const FieldValue& value)
+{
+    return std::visit(overloads {
+                          [&](int8_t v) { return proc.Write<int8_t>(baseAddress + Offset, v); },
+                          [&](int16_t v) { return proc.Write<int16_t>(baseAddress + Offset, v); },
+                          [&](int32_t v) { return proc.Write<int32_t>(baseAddress + Offset, v); },
+                          [&](int64_t v) { return proc.Write<int64_t>(baseAddress + Offset, v); },
+                          [&](uint8_t v) { return proc.Write<uint8_t>(baseAddress + Offset, v); },
+                          [&](uint16_t v) { return proc.Write<uint16_t>(baseAddress + Offset, v); },
+                          [&](uint32_t v) { return proc.Write<uint32_t>(baseAddress + Offset, v); },
+                          [&](uint64_t v) { return proc.Write<uint64_t>(baseAddress + Offset, v); },
+                          [&](Pointer ptr) { return proc.Write<uintptr_t>(baseAddress + Offset, ptr.Address); },
+                          [&](const std::string& str) {
+                              Size = str.size();
+                              return proc.WriteBuffer(baseAddress + Offset, str.data(), str.size());
+                          },
+                          [&](StartEndPointer ptr) { return proc.Write<StartEndPointer>(baseAddress + Offset, ptr); },
+                          [&](float v) { return proc.Write<float>(baseAddress + Offset, v); },
+                          [&](double v) { return proc.Write<double>(baseAddress + Offset, v); } },
+        value);
+}
+
 Dissection::Dissection(Process& proc, const std::string& name, uintptr_t address)
     : m_Name(name), m_Address(address)
 {

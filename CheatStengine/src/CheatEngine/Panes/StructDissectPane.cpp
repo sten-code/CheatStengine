@@ -62,12 +62,71 @@ std::string StructDissectPane::FormatFieldValue(const FieldValue& fieldValue, Fi
     return std::visit(visitor, fieldValue);
 }
 
+FieldValue ParseFieldValue(const std::string& str, const Field& field)
+{
+    std::string parsed = str;
+    int base = 10;
+    if (field.Type != FieldType::String) {
+        if (parsed.starts_with("0x") || parsed.starts_with("0X")) {
+            parsed = parsed.substr(2);
+            base = 16;
+        }
+    }
+
+    switch (field.Type) {
+        case FieldType::SignedDecInt: {
+            switch (field.Size) {
+                case 1: return static_cast<int8_t>(std::stoll(parsed, nullptr, base));
+                case 2: return static_cast<int16_t>(std::stoll(parsed, nullptr, base));
+                case 4: return static_cast<int32_t>(std::stoll(parsed, nullptr, base));
+                case 8: return std::stoll(parsed);
+                default: return {};
+            }
+        }
+        case FieldType::UnsignedDecInt: {
+            switch (field.Size) {
+                case 1: return static_cast<uint8_t>(std::stoull(parsed, nullptr, base));
+                case 2: return static_cast<uint16_t>(std::stoull(parsed, nullptr, base));
+                case 4: return static_cast<uint32_t>(std::stoull(parsed, nullptr, base));
+                case 8: return std::stoull(parsed, nullptr, base);
+                default: return {};
+            }
+        }
+        case FieldType::HexInt: {
+            switch (field.Size) {
+                case 1: return static_cast<uint8_t>(std::stoull(parsed, nullptr, 16));
+                case 2: return static_cast<uint16_t>(std::stoull(parsed, nullptr, 16));
+                case 4: return static_cast<uint32_t>(std::stoull(parsed, nullptr, 16));
+                case 8: return std::stoull(parsed, nullptr, 16);
+                default: return {};
+            }
+        }
+        case FieldType::Float: return std::stof(parsed);
+        case FieldType::Double: return std::stod(parsed);
+        case FieldType::String: return parsed;
+        case FieldType::Pointer: return Pointer { std::stoull(parsed, nullptr, 16) };
+        case FieldType::StartEndPointer: {
+            size_t dashPos = parsed.find('-');
+            if (dashPos == std::string::npos) {
+                return {};
+            }
+            std::string startStr = parsed.substr(0, dashPos);
+            std::string endStr = parsed.substr(dashPos + 1);
+            uintptr_t startAddr = std::stoull(startStr, nullptr, 16);
+            uintptr_t endAddr = std::stoull(endStr, nullptr, 16);
+            return StartEndPointer { startAddr, endAddr };
+        }
+        default: return {};
+    }
+}
+
 StructDissectPane::StructDissectPane(State& state, ModalManager& modalManager)
     : Pane(ICON_MDI_CONTENT_CUT " Struct Dissect", state)
     , m_ModalManager(modalManager)
 {
     m_ModalManager.RegisterModal("Add Dissection", BIND_FN(StructDissectPane::AddDissectionModal));
     m_ModalManager.RegisterModal("Add Element", BIND_FN(StructDissectPane::AddElementModal));
+    m_ModalManager.RegisterModal("Edit Value", BIND_FN(StructDissectPane::EditValueModal));
 }
 
 void StructDissectPane::Draw()
@@ -372,6 +431,10 @@ bool StructDissectPane::FieldContextMenu(
             ImGui::EndMenu();
         }
 
+        if (ImGui::RoundedMenuItem("Edit Value")) {
+            m_ModalManager.OpenModal("Edit Value", EditValuePayload { address, field, value });
+        }
+
         if (field.Type == FieldType::Pointer || field.Type == FieldType::StartEndPointer || field.Type == FieldType::Dissection) {
             ImGui::Separator();
 
@@ -607,6 +670,39 @@ void StructDissectPane::AddElementModal(const std::string& name, const std::any&
         ImGui::SameLine();
         if (ImGui::Button("Cancel", ImVec2 { 70.0f, 0 })) {
             offsetInput.clear();
+            ImGui::CloseCurrentPopup();
+        }
+
+        ImGui::EndPopup();
+    }
+}
+
+void StructDissectPane::EditValueModal(const std::string& name, const std::any& rawPayload)
+{
+    static std::string valueInput;
+
+    if (ImGui::BeginPopupModal(name.c_str(), nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
+        EditValuePayload payload = std::any_cast<EditValuePayload>(rawPayload);
+
+        if (ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows)
+            && ImGui::IsKeyPressed(ImGuiKey_Escape)) {
+            ImGui::CloseCurrentPopup();
+        }
+        if (ImGui::IsWindowAppearing()) {
+            valueInput = FormatFieldValue(payload.CurrentValue, payload.Field);
+            ImGui::SetKeyboardFocusHere();
+        }
+
+        bool commitNow = ImGui::InputText("New Value", &valueInput, ImGuiInputTextFlags_EnterReturnsTrue);
+
+        if (commitNow || ImGui::Button("OK", ImVec2 { 70.0f, 0 })) {
+            FieldValue value = ParseFieldValue(valueInput, payload.Field);
+            payload.Field.WriteField(m_State.Process, payload.Address - payload.Field.Offset, value);
+            ImGui::CloseCurrentPopup();
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("Cancel", ImVec2 { 70.0f, 0 })) {
+            valueInput.clear();
             ImGui::CloseCurrentPopup();
         }
 
