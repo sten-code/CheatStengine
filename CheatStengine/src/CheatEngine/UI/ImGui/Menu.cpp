@@ -48,7 +48,7 @@ namespace ImGui {
             BeginDisabled();
 
         // We use ImGuiSelectableFlags_NoSetKeyOwner to allow down on one menu item, move, up on another.
-        const ImGuiSelectableFlags selectable_flags = ImGuiSelectableFlags_SelectOnRelease | ImGuiSelectableFlags_NoSetKeyOwner | ImGuiSelectableFlags_SetNavIdOnHover;
+        const ImGuiButtonFlags button_flags = ImGuiButtonFlags_NoSetKeyOwner;
         const ImGuiMenuColumns* offsets = &window->DC.MenuColumns;
 
         if (window->DC.LayoutType == ImGuiLayoutType_Horizontal) {
@@ -65,7 +65,10 @@ namespace ImGui {
             ItemAdd(bb, id);
 
             bool hovered, held;
-            pressed = ButtonBehavior(bb, id, &hovered, &held, selectable_flags);
+            pressed = ButtonBehavior(bb, id, &hovered, &held, button_flags);
+
+            if (pressed && enabled)
+                CloseCurrentPopup();
 
             const ImU32 col = GetColorU32(
                 (held && hovered) ? ImGuiCol_ButtonActive
@@ -97,7 +100,10 @@ namespace ImGui {
             ItemAdd(bb, id);
 
             bool hovered, held;
-            pressed = ButtonBehavior(bb, id, &hovered, &held, selectable_flags | ImGuiSelectableFlags_SpanAvailWidth);
+            pressed = ButtonBehavior(bb, id, &hovered, &held, button_flags);
+
+            if (pressed && enabled)
+                CloseCurrentPopup();
 
             if (hovered) {
                 const ImU32 col = GetColorU32((held && hovered) ? ImGuiCol_HeaderActive
