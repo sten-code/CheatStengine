@@ -3,14 +3,14 @@
 #include <CheatEngine/Utils.h>
 
 #include <DbgHelp.h>
+#include <Engine/Core/Log.h>
 
 namespace RTTI {
     std::string DemangleSymbol(const std::string& name)
     {
         std::string demangledName = std::string(1024, '\0');
         std::string mangledName = name;
-
-        if (mangledName.starts_with(".?AV")) {
+        if (mangledName.starts_with(".?AV") || mangledName.starts_with(".?AU")) {
             mangledName = "?" + mangledName.substr(4);
         }
 
@@ -24,6 +24,7 @@ namespace RTTI {
             demangledName = demangledName.substr(4);
         }
 
+        INFO("Demangled symbol: {} to {}", name, demangledName);
         return demangledName;
     }
 
