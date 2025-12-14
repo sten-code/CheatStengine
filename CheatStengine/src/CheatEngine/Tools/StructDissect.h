@@ -40,6 +40,11 @@ using FieldValue = std::variant<
     float, double>;
 
 struct Field {
+    struct Pointed {
+        uintptr_t Address;
+        size_t Size;
+    };
+
     uintptr_t Offset;
     FieldType Type;
     size_t Size;
@@ -50,6 +55,7 @@ struct Field {
 
     FieldValue ReadField(const Process& proc, uintptr_t baseAddress) const;
     bool WriteField(const Process& proc, uintptr_t baseAddress, const FieldValue& value);
+    Pointed GetPointedAddress(const Process& proc, uintptr_t baseAddress) const;
 };
 
 std::vector<Field> ExploreAddress(Process& proc, uintptr_t baseAddress, size_t size);

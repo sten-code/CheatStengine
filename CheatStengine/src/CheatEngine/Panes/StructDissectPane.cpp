@@ -227,10 +227,8 @@ bool StructDissectPane::DrawField(Field& field, uintptr_t baseAddress, size_t de
     bool rowVisible = ImGui::IsRectVisible(rowMin, rowMax);
 
     FieldValue value {};
-    bool valueRead = false;
     if (rowVisible) {
         value = field.ReadField(m_State.Process, baseAddress);
-        valueRead = true;
     }
 
     // Draw selectable row
@@ -279,37 +277,17 @@ bool StructDissectPane::DrawField(Field& field, uintptr_t baseAddress, size_t de
         }
 
         if (field.Expanded) {
-            size_t size;
-            size_t pointedAddress;
-            if (field.Type == FieldType::StartEndPointer) {
-                if (!valueRead) {
-                    value = field.ReadField(m_State.Process, baseAddress);
-                }
-
-                StartEndPointer pair = std::get<StartEndPointer>(value);
-                pointedAddress = pair.Start;
-                size = pair.End - pair.Start;
-            } else if (field.Type == FieldType::Pointer) {
-                if (!valueRead) {
-                    value = field.ReadField(m_State.Process, baseAddress);
-                }
-
-                pointedAddress = std::get<Pointer>(value).Address;
-                size = 0x400;
-            } else {
-                pointedAddress = baseAddress;
-                size = 0x400;
-            }
+            Field::Pointed pointed = field.GetPointedAddress(m_State.Process, baseAddress);
 
             if (!field.Explored) {
-                field.Children = ExploreAddress(m_State.Process, pointedAddress, size);
+                field.Children = ExploreAddress(m_State.Process, pointed.Address, pointed.Size);
                 field.Explored = true;
             }
 
             for (size_t i = 0; i < field.Children.size(); i++) {
                 Field& childField = field.Children[i];
                 ImGui::PushID(&childField);
-                bool deleteField = DrawField(childField, pointedAddress, depth + 1);
+                bool deleteField = DrawField(childField, pointed.Address, depth + 1);
                 if (deleteField) {
                     field.Children.erase(field.Children.begin() + i);
                     i--;

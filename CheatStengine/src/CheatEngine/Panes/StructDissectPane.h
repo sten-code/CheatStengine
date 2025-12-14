@@ -12,7 +12,7 @@ struct AddElementPayload {
 };
 
 struct EditValuePayload {
-    uintptr_t Address;
+    uintptr_t Address = 0;
     Field& Field;
     FieldValue CurrentValue;
 };

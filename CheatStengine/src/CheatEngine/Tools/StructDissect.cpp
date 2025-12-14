@@ -194,6 +194,25 @@ bool Field::WriteField(const Process& proc, uintptr_t baseAddress, const FieldVa
         value);
 }
 
+Field::Pointed Field::GetPointedAddress(const Process& proc, uintptr_t baseAddress) const
+{
+    if (Type == FieldType::StartEndPointer) {
+        FieldValue value = ReadField(proc, baseAddress);
+        StartEndPointer pair = std::get<StartEndPointer>(value);
+        uintptr_t pointedAddress = pair.Start;
+        size_t size = pair.End - pair.Start;
+        return { pointedAddress, size };
+    }
+
+    if (Type == FieldType::Pointer) {
+        FieldValue value = ReadField(proc, baseAddress);
+        uintptr_t pointedAddress = std::get<Pointer>(value).Address;
+        return { pointedAddress, 0x400 };
+    }
+
+    return { baseAddress, 0x400 };
+}
+
 Dissection::Dissection(Process& proc, const std::string& name, uintptr_t address)
     : m_Name(name), m_Address(address)
 {
