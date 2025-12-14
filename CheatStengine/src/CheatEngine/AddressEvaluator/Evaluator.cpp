@@ -25,7 +25,6 @@ namespace AddressEvaluator {
             case Operation::Sub: return left.Value - right.Value;
             case Operation::Mul: return left.Value * right.Value;
             case Operation::Div: {
-                INFO("Dividing {} by {}", left.Value, right.Value);
                 if (right.Value == 0) {
                     return Error::DivisionByZero;
                 }

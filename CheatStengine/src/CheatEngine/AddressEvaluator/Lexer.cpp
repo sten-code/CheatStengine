@@ -30,7 +30,7 @@ namespace AddressEvaluator {
                 }
                 std::string hexStr = m_Source.substr(start, m_Position - start);
                 uintptr_t number = std::stoull(hexStr, nullptr, 16);
-                INFO("Parsed hex number: {}", number);
+                // INFO("Parsed hex number: {}", number);
                 m_Tokens.push_back(Token { TokenType::Number, number });
             } else if (isxdigit(c)) {
                 size_t original = m_Position - 1;
@@ -43,7 +43,7 @@ namespace AddressEvaluator {
                 }
                 std::string numberStr = m_Source.substr(start, m_Position - start);
                 uintptr_t number = std::stoull(numberStr, nullptr, 16);
-                INFO("Parsed number: {}", number);
+                // INFO("Parsed number: {}", number);
                 m_Tokens.push_back(Token { TokenType::Number, number });
             } else if (isalpha(c) || c == '_') {
             identifier:
@@ -51,7 +51,7 @@ namespace AddressEvaluator {
                     m_Position++;
                 }
                 std::string str = m_Source.substr(start, m_Position - start);
-                INFO("Parsed identifier: {}", str);
+                // INFO("Parsed identifier: {}", str);
                 m_Tokens.push_back(Token { TokenType::Identifier, str });
             } else {
                 switch (c) {

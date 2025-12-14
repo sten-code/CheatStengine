@@ -23,22 +23,22 @@ public:
 
     void Draw() override;
 
-    void AddDissection(const std::string& name, uintptr_t address);
+    void AddDissection(const std::string& name, uintptr_t address) const;
 
 private:
     static std::string FormatFieldValue(const FieldValue& fieldValue, const Field& field);
     static FieldValue ParseFieldValue(const std::string& str, const Field& field);
 
     void DrawDissection(Dissection& dissection) const;
-    bool DrawField(Field& field, uintptr_t baseAddress, size_t depth = 0) const;
+    void DrawField(Field& field, uintptr_t baseAddress, size_t depth = 0) const;
 
     bool FieldContextMenu(
         const std::string& label, Field& field,
         uintptr_t address, const FieldValue& value) const;
 
-    void AddDissectionModal(const std::string& name, const std::any& rawPayload);
+    void AddDissectionModal(const std::string& name, const std::any& rawPayload) const;
     void AddElementModal(const std::string& name, const std::any& rawPayload);
-    void EditValueModal(const std::string& name, const std::any& rawPayload);
+    void EditValueModal(const std::string& name, const std::any& rawPayload) const;
 
 private:
     ModalManager& m_ModalManager;

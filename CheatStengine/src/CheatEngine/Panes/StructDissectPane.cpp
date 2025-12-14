@@ -12,17 +12,15 @@
 
 std::string StructDissectPane::FormatFieldValue(const FieldValue& fieldValue, const Field& field)
 {
-    auto formatInteger = []<typename T>(FieldType type, T value) -> std::string {
-        switch (type) {
-            case FieldType::HexInt: return std::format("0x{:X}", value);
-            case FieldType::SignedDecInt: return std::format("{}", static_cast<std::make_signed_t<T>>(value));
-            case FieldType::UnsignedDecInt: return std::format("{}", value);
-            default: return "Invalid Type";
-        }
-    };
-
     overloads visitor {
-        [&]<std::integral T>(T value) { return formatInteger(field.Type, value); },
+        [&]<std::integral T>(T value) -> std::string {
+            switch (field.Type) {
+                case FieldType::HexInt: return std::format("0x{:X}", value);
+                case FieldType::SignedDecInt: return std::format("{}", static_cast<std::make_signed_t<T>>(value));
+                case FieldType::UnsignedDecInt: return std::format("{}", value);
+                default: return "Invalid Type";
+            }
+        },
         [&]<std::floating_point T>(T value) { return std::format("{}", value); },
         [&](const Pointer& ptr) { return std::format("0x{:X}", ptr.Address); },
         [&](const StartEndPointer& ptr) { return std::format("[0x{:X} - 0x{:X}]", ptr.Start, ptr.End); },
@@ -31,11 +29,54 @@ std::string StructDissectPane::FormatFieldValue(const FieldValue& fieldValue, co
     return std::visit(visitor, fieldValue);
 }
 
+static FieldValue ParseUnsignedInteger(const std::string& str, size_t size, int base)
+{
+    uint64_t value = std::stoull(str, nullptr, base);
+    switch (size) {
+        case 1: return static_cast<uint8_t>(value);
+        case 2: return static_cast<uint16_t>(value);
+        case 4: return static_cast<uint32_t>(value);
+        case 8: return value;
+        default: return {};
+    }
+}
+
+static FieldValue ParseSignedInteger(const std::string& str, size_t size, int base)
+{
+    int64_t value = std::stoll(str, nullptr, base);
+    switch (size) {
+        case 1: return static_cast<int8_t>(value);
+        case 2: return static_cast<int16_t>(value);
+        case 4: return static_cast<int32_t>(value);
+        case 8: return value;
+        default: return {};
+    }
+}
+
+static FieldValue ParseStartEndPointer(const std::string& str)
+{
+    size_t dashPos = str.find('-');
+    if (dashPos == std::string::npos) {
+        return {};
+    }
+
+    std::string startStr = str.substr(0, dashPos);
+    std::string endStr = str.substr(dashPos + 1);
+
+    uintptr_t startAddr = std::stoull(startStr, nullptr, 16);
+    uintptr_t endAddr = std::stoull(endStr, nullptr, 16);
+    return StartEndPointer { startAddr, endAddr };
+}
+
 FieldValue StructDissectPane::ParseFieldValue(const std::string& str, const Field& field)
 {
+    if (field.Type == FieldType::String) {
+        return str;
+    }
+
     std::string parsed = str;
     int base = 10;
-    if (field.Type != FieldType::String) {
+    if (field.Type == FieldType::HexInt || field.Type == FieldType::UnsignedDecInt) {
         if (parsed.starts_with("0x") || parsed.starts_with("0X")) {
             parsed = parsed.substr(2);
             base = 16;
@@ -43,50 +84,17 @@ FieldValue StructDissectPane::ParseFieldValue(const std::string& str, const Fiel
     }
 
     switch (field.Type) {
-        case FieldType::SignedDecInt: {
-            switch (field.Size) {
-                case 1: return static_cast<int8_t>(std::stoll(parsed, nullptr, base));
-                case 2: return static_cast<int16_t>(std::stoll(parsed, nullptr, base));
-                case 4: return static_cast<int32_t>(std::stoll(parsed, nullptr, base));
-                case 8: return std::stoll(parsed);
-                default: return {};
-            }
-        }
-        case FieldType::UnsignedDecInt: {
-            switch (field.Size) {
-                case 1: return static_cast<uint8_t>(std::stoull(parsed, nullptr, base));
-                case 2: return static_cast<uint16_t>(std::stoull(parsed, nullptr, base));
-                case 4: return static_cast<uint32_t>(std::stoull(parsed, nullptr, base));
-                case 8: return std::stoull(parsed, nullptr, base);
-                default: return {};
-            }
-        }
-        case FieldType::HexInt: {
-            switch (field.Size) {
-                case 1: return static_cast<uint8_t>(std::stoull(parsed, nullptr, 16));
-                case 2: return static_cast<uint16_t>(std::stoull(parsed, nullptr, 16));
-                case 4: return static_cast<uint32_t>(std::stoull(parsed, nullptr, 16));
-                case 8: return std::stoull(parsed, nullptr, 16);
-                default: return {};
-            }
-        }
+        case FieldType::UnsignedDecInt: return ParseUnsignedInteger(parsed, field.Size, base);
+        case FieldType::SignedDecInt: return ParseSignedInteger(parsed, field.Size, base);
+        case FieldType::HexInt: return ParseUnsignedInteger(parsed, field.Size, 16);
         case FieldType::Float: return std::stof(parsed);
         case FieldType::Double: return std::stod(parsed);
-        case FieldType::String: return parsed;
         case FieldType::Pointer: return Pointer { std::stoull(parsed, nullptr, 16) };
-        case FieldType::StartEndPointer: {
-            size_t dashPos = parsed.find('-');
-            if (dashPos == std::string::npos) {
-                return {};
-            }
-            std::string startStr = parsed.substr(0, dashPos);
-            std::string endStr = parsed.substr(dashPos + 1);
-            uintptr_t startAddr = std::stoull(startStr, nullptr, 16);
-            uintptr_t endAddr = std::stoull(endStr, nullptr, 16);
-            return StartEndPointer { startAddr, endAddr };
-        }
-        default: return {};
+        case FieldType::StartEndPointer: return ParseStartEndPointer(parsed);
+        case FieldType::Dissection: break;
+        case FieldType::String: break;
     }
+    return {};
 }
 
 StructDissectPane::StructDissectPane(State& state, ModalManager& modalManager)
@@ -127,7 +135,7 @@ void StructDissectPane::Draw()
     ImGui::End();
 }
 
-void StructDissectPane::AddDissection(const std::string& name, uintptr_t address)
+void StructDissectPane::AddDissection(const std::string& name, uintptr_t address) const
 {
     m_State.Dissections.emplace_back(m_State.Process, name, address);
 }
@@ -156,115 +164,160 @@ void StructDissectPane::DrawDissection(Dissection& dissection) const
     Fonts::Pop();
 }
 
-bool StructDissectPane::DrawField(Field& field, uintptr_t baseAddress, size_t depth) const
+static bool IsExpandableType(FieldType type)
+{
+    return type == FieldType::Dissection || type == FieldType::Pointer || type == FieldType::StartEndPointer;
+}
+
+void StructDissectPane::DrawField(Field& field, uintptr_t baseAddress, size_t depth) const
 {
     static Field* selectedField = nullptr;
-    bool selected = (&field == selectedField);
 
-    ImGui::TableNextRow();
-    ImGui::TableSetColumnIndex(0);
+    struct RowInfo {
+        Field* ChildField;
+        Field* ParentField;
+        uintptr_t BaseAddress;
+        size_t Depth;
+        bool Selected;
+        size_t ChildIndex;
+    };
 
-    uintptr_t address = baseAddress + field.Offset;
-    std::string label;
-    if (field.Name.empty()) {
-        label = std::format(
-            "0x{:04X} - {} {} {}",
-            field.Offset, field.Size, field.Size == 1 ? "Byte" : "Bytes",
-            field.Type);
-    } else {
-        label = std::format(
-            "0x{:04X} - {} {} {}",
-            field.Offset, field.Size, field.Size == 1 ? "Byte" : "Bytes",
-            field.Name);
-    }
+    // Collect all rows in a flat list
+    std::vector<RowInfo> rowsToRender;
+    std::function<void(Field&, Field*, uintptr_t, size_t, size_t)> collectRows = [&](Field& field, Field* parent, uintptr_t addr, size_t depth, size_t childIdx) {
+        bool selected = (&field == selectedField);
 
-    // Determine row visibility
-    ImVec2 rowMin = ImGui::GetCursorScreenPos();
-    float rowHeight = ImGui::GetTextLineHeightWithSpacing();
-    ImVec2 rowMax = ImVec2(rowMin.x + ImGui::GetContentRegionAvail().x, rowMin.y + rowHeight);
-    bool rowVisible = ImGui::IsRectVisible(rowMin, rowMax);
+        rowsToRender.push_back({ &field, parent, addr, depth, selected, childIdx });
 
-    FieldValue value {};
-    if (rowVisible) {
-        value = field.ReadField(m_State.Process, baseAddress);
-    }
-
-    // Draw selectable row
-    ImGui::TableSetColumnIndex(0);
-    if (ImGui::Selectable("", selected, ImGuiSelectableFlags_SpanAllColumns | ImGuiSelectableFlags_AllowOverlap, ImVec2(0.0f, rowHeight))) {
-        selectedField = &field;
-    }
-
-    std::string contextMenuLabel = std::format("##field_value_context_menu_{:X}", reinterpret_cast<uintptr_t>(&field));
-    if (ImGui::IsItemHovered() && ImGui::IsMouseReleased(ImGuiMouseButton_Right)) {
-        selectedField = &field;
-        ImGui::OpenPopup(contextMenuLabel.c_str());
-    }
-
-    bool shouldDelete = FieldContextMenu(contextMenuLabel, field, address, value);
-
-    ImGui::SameLine();
-
-    // Render the field value and/or contents
-    float cursorX = ImGui::GetCursorPosX();
-    float cursorY = ImGui::GetCursorPosY();
-
-    if (field.Type == FieldType::Dissection || field.Type == FieldType::Pointer || field.Type == FieldType::StartEndPointer) {
-        ImGui::SetCursorPosX(cursorX + static_cast<float>(depth) * 16.0f);
-        ImGui::SetCursorPosY(cursorY - 1.0f);
-
-        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0, 0, 0, 0));
-        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0, 0, 0, 0));
-        ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0, 0, 0, 0));
-        if (ImGui::ArrowButton(label.c_str(), field.Expanded ? ImGuiDir_Down : ImGuiDir_Right)) {
-            field.Expanded = !field.Expanded;
-        }
-        ImGui::PopStyleColor(3);
-
-        ImGui::SameLine();
-        ImGui::SetCursorPosX(cursorX + static_cast<float>(depth) * 16.0f + 25.0f);
-        ImGui::SetCursorPosY(cursorY - 2.0f);
-        ImGui::Text(label.c_str());
-
-        ImGui::TableSetColumnIndex(1);
-        ImGui::SetCursorPosY(cursorY - 1.0f);
-        if (field.Type != FieldType::Dissection) {
-            std::string formattedValue = FormatFieldValue(value, field);
-            std::string formattedAddr = std::format("0x{:X}", address);
-            ImGui::Text("%s : %s", formattedAddr.c_str(), formattedValue.c_str());
-        }
-
-        if (field.Expanded) {
-            Field::Pointed pointed = field.GetPointedAddress(m_State.Process, baseAddress);
-
+        if (IsExpandableType(field.Type) && field.Expanded) {
             if (!field.Explored) {
+                Field::Pointed pointed = field.GetPointedAddress(m_State.Process, addr);
                 field.Children = ExploreAddress(m_State.Process, pointed.Address, pointed.Size);
                 field.Explored = true;
             }
 
+            uintptr_t childBaseAddr = (field.Type == FieldType::Dissection) ? addr + field.Offset : field.GetPointedAddress(m_State.Process, addr).Address;
+
             for (size_t i = 0; i < field.Children.size(); i++) {
-                Field& childField = field.Children[i];
-                ImGui::PushID(&childField);
-                bool deleteField = DrawField(childField, pointed.Address, depth + 1);
-                if (deleteField) {
-                    field.Children.erase(field.Children.begin() + i);
-                    i--;
-                }
-                ImGui::PopID();
+                collectRows(field.Children[i], &field, childBaseAddr, depth + 1, i);
             }
         }
-    } else {
-        ImGui::SetCursorPosX(cursorX + static_cast<float>(depth) * 16.0f + 25.0f);
-        ImGui::SetCursorPosY(cursorY + 1.0f);
-        ImGui::Text(label.c_str());
+    };
 
-        ImGui::TableSetColumnIndex(1);
-        ImGui::SetCursorPosY(cursorY + 2.0f);
-        std::string formattedValue = FormatFieldValue(value, field);
-        std::string formattedAddr = std::format("0x{:X}", address);
-        ImGui::Text("%s : %s", formattedAddr.c_str(), formattedValue.c_str());
+    collectRows(field, nullptr, baseAddress, depth, 0);
+
+    // Render the calculated rows with clipping
+
+    ImGuiListClipper clipper;
+    clipper.Begin(static_cast<int>(rowsToRender.size()));
+
+    std::vector<bool> deleteFlags(rowsToRender.size(), false);
+
+    while (clipper.Step()) {
+        for (int rowIdx = clipper.DisplayStart; rowIdx < clipper.DisplayEnd; rowIdx++) {
+            auto& rowInfo = rowsToRender[rowIdx];
+            Field& currentField = *rowInfo.ChildField;
+            uintptr_t address = rowInfo.BaseAddress + currentField.Offset;
+
+            ImGui::PushID(&currentField);
+
+            ImGui::TableNextRow();
+            ImGui::TableSetColumnIndex(0);
+
+            std::string label;
+            if (currentField.Name.empty()) {
+                label = std::format(
+                    "0x{:04X} - {} {} {}",
+                    currentField.Offset, currentField.Size, currentField.Size == 1 ? "Byte" : "Bytes",
+                    currentField.Type);
+            } else {
+                label = std::format(
+                    "0x{:04X} - {} {} {}",
+                    currentField.Offset, currentField.Size, currentField.Size == 1 ? "Byte" : "Bytes",
+                    currentField.Name);
+            }
+
+            FieldValue value = currentField.ReadField(m_State.Process, rowInfo.BaseAddress);
+
+            if (ImGui::Selectable("", rowInfo.Selected, ImGuiSelectableFlags_SpanAllColumns | ImGuiSelectableFlags_AllowOverlap,
+                    ImVec2(0.0f, ImGui::GetTextLineHeightWithSpacing()))) {
+                selectedField = &currentField;
+            }
+
+            std::string contextMenuLabel = std::format("##field_value_context_menu_{:X}", reinterpret_cast<uintptr_t>(&currentField));
+            if (ImGui::IsItemHovered() && ImGui::IsMouseReleased(ImGuiMouseButton_Right)) {
+                selectedField = &currentField;
+                ImGui::OpenPopup(contextMenuLabel.c_str());
+            }
+
+            bool shouldDelete = FieldContextMenu(contextMenuLabel, currentField, address, value);
+            deleteFlags[rowIdx] = shouldDelete;
+
+            ImGui::SameLine();
+
+            // Render the field
+            float cursorX = ImGui::GetCursorPosX();
+            float cursorY = ImGui::GetCursorPosY();
+
+            if (IsExpandableType(currentField.Type)) {
+                ImGui::SetCursorPosX(cursorX + static_cast<float>(rowInfo.Depth) * 16.0f);
+                ImGui::SetCursorPosY(cursorY - 1.0f);
+
+                ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0, 0, 0, 0));
+                ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0, 0, 0, 0));
+                ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0, 0, 0, 0));
+                if (ImGui::ArrowButton(label.c_str(), currentField.Expanded ? ImGuiDir_Down : ImGuiDir_Right)) {
+                    currentField.Expanded = !currentField.Expanded;
+                }
+                ImGui::PopStyleColor(3);
+
+                ImGui::SameLine();
+                ImGui::SetCursorPosX(cursorX + static_cast<float>(rowInfo.Depth) * 16.0f + 25.0f);
+                ImGui::SetCursorPosY(cursorY - 2.0f);
+                ImGui::Text(label.c_str());
+
+                ImGui::TableSetColumnIndex(1);
+                ImGui::SetCursorPosY(cursorY - 1.0f);
+                if (currentField.Type != FieldType::Dissection) {
+                    std::string formattedValue = FormatFieldValue(value, currentField);
+                    std::string formattedAddr = std::format("0x{:X}", address);
+                    ImGui::Text("%s : %s", formattedAddr.c_str(), formattedValue.c_str());
+                }
+            } else {
+                ImGui::SetCursorPosX(cursorX + static_cast<float>(rowInfo.Depth) * 16.0f + 25.0f);
+                ImGui::SetCursorPosY(cursorY + 1.0f);
+                ImGui::Text(label.c_str());
+
+                ImGui::TableSetColumnIndex(1);
+                ImGui::SetCursorPosY(cursorY + 2.0f);
+                std::string formattedValue = FormatFieldValue(value, currentField);
+                std::string formattedAddr = std::format("0x{:X}", address);
+                ImGui::Text("%s : %s", formattedAddr.c_str(), formattedValue.c_str());
+            }
+
+            ImGui::PopID();
+        }
     }
-    return shouldDelete;
+
+    clipper.End();
+
+    for (int i = static_cast<int>(rowsToRender.size()) - 1; i >= 0; i--) {
+        if (!deleteFlags[i]) {
+            continue;
+        }
+
+        RowInfo& rowInfo = rowsToRender[i];
+        if (rowInfo.ParentField == nullptr) {
+            continue;
+        }
+
+        if (rowInfo.ChildIndex < rowInfo.ParentField->Children.size()) {
+            rowInfo.ParentField->Children.erase(rowInfo.ParentField->Children.begin() + rowInfo.ChildIndex);
+            if (selectedField == rowInfo.ChildField) {
+                selectedField = nullptr;
+            }
+        }
+    }
 }
 
 bool StructDissectPane::FieldContextMenu(
@@ -388,9 +441,9 @@ bool StructDissectPane::FieldContextMenu(
                     field.Children = ExploreAddress(m_State.Process, pair.Start, pair.End - pair.Start);
                 } else if (field.Type == FieldType::Pointer) {
                     uintptr_t pointedAddress = m_State.Process.Read<uintptr_t>(address);
-                    field.Children = ExploreAddress(m_State.Process, pointedAddress, 0x400);
+                    field.Children = ExploreAddress(m_State.Process, pointedAddress, 0x1000);
                 } else {
-                    field.Children = ExploreAddress(m_State.Process, address, 0x400);
+                    field.Children = ExploreAddress(m_State.Process, address, 0x1000);
                 }
                 field.Explored = true;
             }
@@ -410,7 +463,7 @@ bool StructDissectPane::FieldContextMenu(
     return shouldDelete;
 }
 
-void StructDissectPane::AddDissectionModal(const std::string& name, const std::any& rawPayload)
+void StructDissectPane::AddDissectionModal(const std::string& name, const std::any& rawPayload) const
 {
     if (ImGui::BeginPopupModal(name.c_str(), nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
         if (ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows)
@@ -613,7 +666,7 @@ void StructDissectPane::AddElementModal(const std::string& name, const std::any&
     }
 }
 
-void StructDissectPane::EditValueModal(const std::string& name, const std::any& rawPayload)
+void StructDissectPane::EditValueModal(const std::string& name, const std::any& rawPayload) const
 {
     static std::string valueInput;
 

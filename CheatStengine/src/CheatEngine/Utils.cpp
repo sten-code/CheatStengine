@@ -1,5 +1,7 @@
 #include "Utils.h"
 
+#include <cstdint>
+
 namespace Utils {
 
     std::optional<MODULEENTRY32> GetModuleForAddress(uintptr_t address, const std::vector<MODULEENTRY32>& modules)

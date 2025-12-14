@@ -207,20 +207,20 @@ Field::Pointed Field::GetPointedAddress(const Process& proc, uintptr_t baseAddre
     if (Type == FieldType::Pointer) {
         FieldValue value = ReadField(proc, baseAddress);
         uintptr_t pointedAddress = std::get<Pointer>(value).Address;
-        return { pointedAddress, 0x400 };
+        return { pointedAddress, 0x1000 };
     }
 
-    return { baseAddress, 0x400 };
+    return { baseAddress, 0x1000 };
 }
 
 Dissection::Dissection(Process& proc, const std::string& name, uintptr_t address)
     : m_Name(name), m_Address(address)
 {
-    std::vector<Field> fields = ExploreAddress(proc, address, 0x400);
+    std::vector<Field> fields = ExploreAddress(proc, address, 0x1000);
     m_Field = Field {
         0,
         FieldType::Dissection,
-        0x400,
+        0x1000,
         name,
         fields,
         true,
