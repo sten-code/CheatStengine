@@ -53,9 +53,9 @@ struct Field {
     bool Explored = false;
     bool Expanded = false;
 
-    FieldValue ReadField(const Process& proc, uintptr_t baseAddress) const;
+    [[nodiscard]] FieldValue ReadField(const Process& proc, uintptr_t baseAddress) const;
     bool WriteField(const Process& proc, uintptr_t baseAddress, const FieldValue& value);
-    Pointed GetPointedAddress(const Process& proc, uintptr_t baseAddress) const;
+    [[nodiscard]] Pointed GetPointedAddress(const Process& proc, uintptr_t baseAddress) const;
 };
 
 std::vector<Field> ExploreAddress(Process& proc, uintptr_t baseAddress, size_t size);

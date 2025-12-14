@@ -91,7 +91,7 @@ FieldValue StructDissectPane::ParseFieldValue(const std::string& str, const Fiel
         case FieldType::Double: return std::stod(parsed);
         case FieldType::Pointer: return Pointer { std::stoull(parsed, nullptr, 16) };
         case FieldType::StartEndPointer: return ParseStartEndPointer(parsed);
-        case FieldType::Dissection: break;
+        case FieldType::Dissection:
         case FieldType::String: break;
     }
     return {};
@@ -215,7 +215,7 @@ void StructDissectPane::DrawField(Field& field, uintptr_t baseAddress, size_t de
 
     while (clipper.Step()) {
         for (int rowIdx = clipper.DisplayStart; rowIdx < clipper.DisplayEnd; rowIdx++) {
-            auto& rowInfo = rowsToRender[rowIdx];
+            RowInfo& rowInfo = rowsToRender[rowIdx];
             Field& currentField = *rowInfo.ChildField;
             uintptr_t address = rowInfo.BaseAddress + currentField.Offset;
 
