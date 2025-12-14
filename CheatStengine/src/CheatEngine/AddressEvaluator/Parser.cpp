@@ -19,26 +19,26 @@ namespace AddressEvaluator {
 
     std::unique_ptr<Expr> Parser::ParseAdditiveBinOp()
     {
-        std::unique_ptr<Expr> left = ParsePrimary();
-        if (!left) {
-            return nullptr;
-        }
+        return ParseBinaryOp(&Parser::ParseMultiplicativeBinOp,
+            [](TokenType t) -> std::optional<Operation> {
+                if (t == TokenType::Add)
+                    return Operation::Add;
+                if (t == TokenType::Sub)
+                    return Operation::Sub;
+                return std::nullopt;
+            });
+    }
 
-        while (true) {
-            std::optional<Token> op = At();
-            if (!op || (op->Type != TokenType::Add && op->Type != TokenType::Sub)) {
-                break;
-            }
-            Eat();
-            std::unique_ptr<Expr> right = ParsePrimary();
-            if (!right) {
-                return nullptr;
-            }
-            Operation operation = (op->Type == TokenType::Add) ? Operation::Add : Operation::Sub;
-            left = std::make_unique<Expr>(BinaryExpr { operation, std::move(left), std::move(right) });
-        }
-
-        return left;
+    std::unique_ptr<Expr> Parser::ParseMultiplicativeBinOp()
+    {
+        return ParseBinaryOp(&Parser::ParsePrimary,
+            [](TokenType t) -> std::optional<Operation> {
+                if (t == TokenType::Mul)
+                    return Operation::Mul;
+                if (t == TokenType::Div)
+                    return Operation::Div;
+                return std::nullopt;
+            });
     }
 
     std::unique_ptr<Expr> Parser::ParsePrimary()
@@ -64,6 +64,7 @@ namespace AddressEvaluator {
                 return nullptr;
         }
     }
+
     std::optional<Token> Parser::At() const
     {
         if (m_Position >= m_Tokens.size()) {

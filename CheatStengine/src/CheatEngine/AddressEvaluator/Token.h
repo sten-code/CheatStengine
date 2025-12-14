@@ -1,5 +1,6 @@
 #pragma once
 
+#include <Engine/Core/Core.h>
 #include <format>
 #include <sstream>
 #include <string>
@@ -55,11 +56,5 @@ namespace AddressEvaluator {
 
 }
 
-template<>
-struct std::formatter<AddressEvaluator::TokenType> : std::formatter<std::string_view> {
-    auto format(AddressEvaluator::TokenType type, format_context& ctx) const {
-        std::ostringstream oss;
-        oss << type;
-        return formatter<std::string_view>::format(oss.str(), ctx);
-    }
-};
+IMPLEMENT_FORMATTER(AddressEvaluator::TokenType);
+IMPLEMENT_FORMATTER(AddressEvaluator::Token);
