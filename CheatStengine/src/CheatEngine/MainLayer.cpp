@@ -38,9 +38,9 @@ MainLayer::MainLayer(Window& window)
         identifiers[moduleName] = reinterpret_cast<uintptr_t>(entry.modBaseAddr);
     }
 
-    AddressEvaluator::Result result = AddressEvaluator::Evaluate("robloxplayerbeta.exe+0x77F3158", identifiers);
+    AddressEvaluator::Result result = AddressEvaluator::Evaluate("robloxplayerbeta.exe+0x7D02728", identifiers);
     if (!result.IsError()) {
-        structDissectPane.AddDissection("RawScheduler", result.Value);
+        structDissectPane.AddDissection("FakeDataModel", result.Value);
     }
 }
 
