@@ -10,7 +10,7 @@
 #include <imgui.h>
 #include <imgui_stdlib.h>
 
-std::string StructDissectPane::FormatFieldValue(const FieldValue& fieldValue, Field& field)
+std::string StructDissectPane::FormatFieldValue(const FieldValue& fieldValue, const Field& field)
 {
     auto formatInteger = []<typename T>(FieldType type, T value) -> std::string {
         switch (type) {
@@ -22,42 +22,11 @@ std::string StructDissectPane::FormatFieldValue(const FieldValue& fieldValue, Fi
     };
 
     overloads visitor {
-        [&](int8_t value) { return formatInteger(field.Type, value); },
-        [&](int16_t value) { return formatInteger(field.Type, value); },
-        [&](int32_t value) { return formatInteger(field.Type, value); },
-        [&](int64_t value) { return formatInteger(field.Type, value); },
-        [&](uint8_t value) { return formatInteger(field.Type, value); },
-        [&](uint16_t value) { return formatInteger(field.Type, value); },
-        [&](uint32_t value) { return formatInteger(field.Type, value); },
-        [&](uint64_t value) { return formatInteger(field.Type, value); },
-        [&](float value) { return std::format("{}", value); },
-        [&](double value) { return std::format("{}", value); },
+        [&]<std::integral T>(T value) { return formatInteger(field.Type, value); },
+        [&]<std::floating_point T>(T value) { return std::format("{}", value); },
         [&](const Pointer& ptr) { return std::format("0x{:X}", ptr.Address); },
         [&](const StartEndPointer& ptr) { return std::format("[0x{:X} - 0x{:X}]", ptr.Start, ptr.End); },
-        [&](const std::string& str) {
-            std::string escaped;
-            escaped.reserve(str.size() * 2);
-            static const char* hex = "0123456789ABCDEF";
-            for (uint8_t c : str) {
-                switch (c) {
-                    case '\n': escaped += "\\n"; break;
-                    case '\r': escaped += "\\r"; break;
-                    case '\t': escaped += "\\t"; break;
-                    case '\\': escaped += "\\\\"; break;
-                    case '\"': escaped += "\\\""; break;
-                    default: {
-                        if (c >= 32 && c <= 126) {
-                            escaped.push_back(static_cast<char>(c));
-                        } else {
-                            escaped += "\\x";
-                            escaped += hex[c >> 4];
-                            escaped += hex[c & 0xF];
-                        }
-                    }
-                }
-            }
-            return std::format("{}", escaped);
-        },
+        [&](const std::string& str) { return Utils::EscapeString(str); },
     };
     return std::visit(visitor, fieldValue);
 }
@@ -441,7 +410,7 @@ bool StructDissectPane::FieldContextMenu(
     return shouldDelete;
 }
 
-void StructDissectPane::AddDissectionModal(const std::string& name, const std::any& payload)
+void StructDissectPane::AddDissectionModal(const std::string& name, const std::any& rawPayload)
 {
     if (ImGui::BeginPopupModal(name.c_str(), nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
         if (ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows)

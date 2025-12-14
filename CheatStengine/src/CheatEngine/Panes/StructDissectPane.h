@@ -12,7 +12,7 @@ struct AddElementPayload {
 };
 
 struct EditValuePayload {
-    uintptr_t Address = 0;
+    uintptr_t Address;
     Field& Field;
     FieldValue CurrentValue;
 };
@@ -26,7 +26,7 @@ public:
     void AddDissection(const std::string& name, uintptr_t address);
 
 private:
-    static std::string FormatFieldValue(const FieldValue& fieldValue, Field& field);
+    static std::string FormatFieldValue(const FieldValue& fieldValue, const Field& field);
     static FieldValue ParseFieldValue(const std::string& str, const Field& field);
 
     void DrawDissection(Dissection& dissection) const;

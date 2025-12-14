@@ -10,10 +10,10 @@ struct overloads : Ts... {
     using Ts::operator()...;
 };
 
-#define IMPLEMENT_FORMATTER(Type)                                                      \
+#define IMPLEMENT_FORMATTER(T)                                                         \
     template <>                                                                        \
-    struct std::formatter<Type, char> : std::formatter<std::string_view> {             \
-        auto format(const Type& obj, std::format_context& ctx) const                   \
+    struct std::formatter<T, char> : std::formatter<std::string_view> {                \
+        auto format(const T& obj, std::format_context& ctx) const                      \
         {                                                                              \
             std::ostringstream oss;                                                    \
             oss << obj;                                                                \

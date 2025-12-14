@@ -20,21 +20,13 @@ std::string ValueTypeToString(ValueType type)
         default: return "Unknown";
     }
 }
+
 ScanValue ScannedAddress::ReadValue(const Process& proc) const
 {
-    const overloads data = {
-        [this, &proc](int8_t) -> ScanValue { return proc.Read<int8_t>(Address); },
-        [this, &proc](int16_t) -> ScanValue { return proc.Read<int16_t>(Address); },
-        [this, &proc](int32_t) -> ScanValue { return proc.Read<int32_t>(Address); },
-        [this, &proc](int64_t) -> ScanValue { return proc.Read<int64_t>(Address); },
-        [this, &proc](uint8_t) -> ScanValue { return proc.Read<uint8_t>(Address); },
-        [this, &proc](uint16_t) -> ScanValue { return proc.Read<uint16_t>(Address); },
-        [this, &proc](uint32_t) -> ScanValue { return proc.Read<uint32_t>(Address); },
-        [this, &proc](uint64_t) -> ScanValue { return proc.Read<uint64_t>(Address); },
-        [this, &proc](float) -> ScanValue { return proc.Read<float>(Address); },
-        [this, &proc](double) -> ScanValue { return proc.Read<double>(Address); },
+    overloads visitor = {
+        [this, &proc]<typename T>(T) -> ScanValue { return proc.Read<T>(Address); },
     };
-    return std::visit(data, PreviousValue);
+    return std::visit(visitor, PreviousValue);
 }
 
 size_t GetTypeSize(ValueType type)
