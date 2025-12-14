@@ -27,6 +27,7 @@ public:
 
 private:
     static std::string FormatFieldValue(const FieldValue& fieldValue, Field& field);
+    static FieldValue ParseFieldValue(const std::string& str, const Field& field);
 
     void DrawDissection(Dissection& dissection) const;
     bool DrawField(Field& field, uintptr_t baseAddress, size_t depth = 0) const;

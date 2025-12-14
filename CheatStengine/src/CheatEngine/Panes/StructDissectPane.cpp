@@ -62,7 +62,7 @@ std::string StructDissectPane::FormatFieldValue(const FieldValue& fieldValue, Fi
     return std::visit(visitor, fieldValue);
 }
 
-FieldValue ParseFieldValue(const std::string& str, const Field& field)
+FieldValue StructDissectPane::ParseFieldValue(const std::string& str, const Field& field)
 {
     std::string parsed = str;
     int base = 10;
@@ -179,17 +179,6 @@ void StructDissectPane::DrawDissection(Dissection& dissection) const
         ImGui::TableHeadersRow();
 
         DrawField(dissection.GetField(), dissection.GetAddress());
-
-        // for (size_t i = 0; i < dissection.Field.Children.size(); i++) {
-        //     Field& field = dissection.Field.Children[i];
-        //     ImGui::PushID(&field);
-        //     bool deleteField = DrawField(field, dissection.Address);
-        //     if (deleteField) {
-        //         dissection.Field.Children.erase(dissection.Field.Children.begin() + i);
-        //         i--;
-        //     }
-        //     ImGui::PopID();
-        // }
 
         ImGui::EndTable();
     }
