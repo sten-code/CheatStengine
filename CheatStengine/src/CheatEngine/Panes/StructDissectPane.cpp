@@ -104,6 +104,7 @@ StructDissectPane::StructDissectPane(State& state, ModalManager& modalManager)
     m_ModalManager.RegisterModal("Add Dissection", BIND_FN(StructDissectPane::AddDissectionModal));
     m_ModalManager.RegisterModal("Add Element", BIND_FN(StructDissectPane::AddElementModal));
     m_ModalManager.RegisterModal("Edit Value", BIND_FN(StructDissectPane::EditValueModal));
+    m_ModalManager.RegisterModal("Change Size", BIND_FN(StructDissectPane::ChangeSizeModal));
 }
 
 void StructDissectPane::Draw()
@@ -274,7 +275,7 @@ void StructDissectPane::DrawField(Field& field, uintptr_t baseAddress, size_t de
                 ImGui::SameLine();
                 ImGui::SetCursorPosX(cursorX + static_cast<float>(rowInfo.Depth) * 16.0f + 25.0f);
                 ImGui::SetCursorPosY(cursorY - 2.0f);
-                ImGui::Text(label.c_str());
+                ImGui::TextUnformatted(label.c_str());
 
                 ImGui::TableSetColumnIndex(1);
                 ImGui::SetCursorPosY(cursorY - 1.0f);
@@ -286,7 +287,7 @@ void StructDissectPane::DrawField(Field& field, uintptr_t baseAddress, size_t de
             } else {
                 ImGui::SetCursorPosX(cursorX + static_cast<float>(rowInfo.Depth) * 16.0f + 25.0f);
                 ImGui::SetCursorPosY(cursorY + 1.0f);
-                ImGui::Text(label.c_str());
+                ImGui::TextUnformatted(label.c_str());
 
                 ImGui::TableSetColumnIndex(1);
                 ImGui::SetCursorPosY(cursorY + 2.0f);
@@ -441,11 +442,20 @@ bool StructDissectPane::FieldContextMenu(
                     field.Children = ExploreAddress(m_State.Process, pair.Start, pair.End - pair.Start);
                 } else if (field.Type == FieldType::Pointer) {
                     uintptr_t pointedAddress = m_State.Process.Read<uintptr_t>(address);
-                    field.Children = ExploreAddress(m_State.Process, pointedAddress, 0x1000);
+                    field.Children = ExploreAddress(m_State.Process, pointedAddress, field.Size);
                 } else {
-                    field.Children = ExploreAddress(m_State.Process, address, 0x1000);
+                    field.Children = ExploreAddress(m_State.Process, address, field.Size);
                 }
                 field.Explored = true;
+            }
+
+            if (ImGui::RoundedMenuItem("Change Size")) {
+                ChangeSizePayload payload = {
+                    field.Size,
+                    address,
+                    field
+                };
+                m_ModalManager.OpenModal("Change Size", payload);
             }
         }
 
@@ -695,6 +705,44 @@ void StructDissectPane::EditValueModal(const std::string& name, const std::any& 
             ImGui::CloseCurrentPopup();
         }
 
+        ImGui::EndPopup();
+    }
+}
+
+void StructDissectPane::ChangeSizeModal(const std::string& name, const std::any& rawPayload) const
+{
+    static std::string sizeInput;
+
+    if (ImGui::BeginPopupModal(name.c_str(), nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
+        ChangeSizePayload payload = std::any_cast<ChangeSizePayload>(rawPayload);
+
+        if (ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows)
+            && ImGui::IsKeyPressed(ImGuiKey_Escape)) {
+            ImGui::CloseCurrentPopup();
+        }
+        if (ImGui::IsWindowAppearing()) {
+            sizeInput = std::format("0x{:X}", payload.CurrentSize);
+            ImGui::SetKeyboardFocusHere();
+        }
+
+        bool commitNow = ImGui::InputText("New Size", &sizeInput, ImGuiInputTextFlags_EnterReturnsTrue);
+
+        if (commitNow || ImGui::Button("OK", ImVec2 { 70.0f, 0 })) {
+            try {
+                size_t size = std::stoull(sizeInput, nullptr, 16);
+                uintptr_t pointedAddress = m_State.Process.Read<uintptr_t>(payload.Address);
+
+                payload.Field.Size = size;
+                payload.Field.Children = ExploreAddress(m_State.Process, pointedAddress, size);
+                ImGui::CloseCurrentPopup();
+            } catch (...) {
+            }
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("Cancel", ImVec2 { 70.0f, 0 })) {
+            sizeInput.clear();
+            ImGui::CloseCurrentPopup();
+        }
         ImGui::EndPopup();
     }
 }

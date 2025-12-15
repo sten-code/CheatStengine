@@ -17,6 +17,12 @@ struct EditValuePayload {
     FieldValue CurrentValue;
 };
 
+struct ChangeSizePayload {
+    size_t CurrentSize;
+    uintptr_t Address;
+    Field& Field;
+};
+
 class StructDissectPane final : public Pane {
 public:
     explicit StructDissectPane(State& state, ModalManager& modalManager);
@@ -39,6 +45,7 @@ private:
     void AddDissectionModal(const std::string& name, const std::any& rawPayload) const;
     void AddElementModal(const std::string& name, const std::any& rawPayload);
     void EditValueModal(const std::string& name, const std::any& rawPayload) const;
+    void ChangeSizeModal(const std::string& name, const std::any& rawPayload) const;
 
 private:
     ModalManager& m_ModalManager;

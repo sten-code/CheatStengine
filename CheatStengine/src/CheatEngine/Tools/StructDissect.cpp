@@ -56,7 +56,7 @@ std::vector<Field> ExploreAddress(Process& proc, uintptr_t baseAddress, size_t s
             if (proc.IsAddressReadable(pointed)) {
                 std::string name = RTTI::GetRTTIName(proc, pointed).value_or("Pointer");
                 // INFO("Found pointer to 0x{:X} ({}) at offset 0x{:X}", pointed, name, offset);
-                fields.emplace_back(offset, FieldType::Pointer, 8, name);
+                fields.emplace_back(offset, FieldType::Pointer, 0x1000, name);
                 offset += 8;
                 continue;
             }
@@ -207,10 +207,10 @@ Field::Pointed Field::GetPointedAddress(const Process& proc, uintptr_t baseAddre
     if (Type == FieldType::Pointer) {
         FieldValue value = ReadField(proc, baseAddress);
         uintptr_t pointedAddress = std::get<Pointer>(value).Address;
-        return { pointedAddress, 0x1000 };
+        return { pointedAddress, Size };
     }
 
-    return { baseAddress, 0x1000 };
+    return { baseAddress, Size };
 }
 
 Dissection::Dissection(Process& proc, const std::string& name, uintptr_t address)

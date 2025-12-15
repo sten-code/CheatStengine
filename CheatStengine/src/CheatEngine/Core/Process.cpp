@@ -95,12 +95,14 @@ std::vector<PROCESSENTRY32> Process::EnumerateProcesses()
     CloseHandle(snapshot);
     return procs;
 }
+
 std::vector<Process::Window> Process::EnumerateWindows()
 {
     std::vector<Window> handles;
     EnumWindows(EnumWindowsToVector, reinterpret_cast<LPARAM>(&handles));
     return handles;
 }
+
 std::vector<Process::Window> Process::EnumerateApplications()
 {
     std::vector<Window> apps;
