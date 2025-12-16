@@ -4,6 +4,7 @@
 #include <imgui.h>
 
 #include <CheatEngine/Icons/MaterialDesignIcons.h>
+#include <CheatEngine/UI/ImGui/Menu.h>
 #include <algorithm>
 #include <format>
 
@@ -60,30 +61,29 @@ void ModulesPane::Draw()
             m_SelectedIndex = -1;
         }
 
-        if (ImGui::BeginPopupContextItem(entry.szModule)) {
+        if (ImGui::IsItemHovered() && ImGui::IsMouseReleased(ImGuiMouseButton_Right)) {
             m_SelectedIndex = i; // Ensure it stays selected on right-click
+            ImGui::OpenPopup(entry.szModule);
+        }
 
-            if (ImGui::MenuItem("Copy Name")) {
+        if (ImGui::BeginPopup(entry.szModule)) {
+            if (ImGui::RoundedMenuItem("Copy Name")) {
                 ImGui::SetClipboardText(entry.szModule);
             }
-            if (ImGui::BeginMenu("Copy Base Address")) {
-                if (ImGui::MenuItem("As Hex")) {
-                    ImGui::SetClipboardText(std::format("0x{:X}", reinterpret_cast<uintptr_t>(entry.modBaseAddr)).c_str());
-                }
-                if (ImGui::MenuItem("As Decimal")) {
-                    ImGui::SetClipboardText(std::to_string(reinterpret_cast<uintptr_t>(entry.modBaseAddr)).c_str());
-                }
-                ImGui::EndMenu();
+            if (ImGui::RoundedMenuItem("Copy Base Address")) {
+                ImGui::SetClipboardText(std::format("0x{:X}", reinterpret_cast<uintptr_t>(entry.modBaseAddr)).c_str());
             }
-            if (ImGui::BeginMenu("Copy Size")) {
-                if (ImGui::MenuItem("As Hex")) {
+
+            if (ImGui::BeginRoundedMenu("Copy Size")) {
+                if (ImGui::RoundedMenuItem("As Hex")) {
                     ImGui::SetClipboardText(std::format("0x{:X}", entry.modBaseSize).c_str());
                 }
-                if (ImGui::MenuItem("As Decimal")) {
+                if (ImGui::RoundedMenuItem("As Decimal")) {
                     ImGui::SetClipboardText(std::to_string(entry.modBaseSize).c_str());
                 }
                 ImGui::EndMenu();
             }
+
             ImGui::EndPopup();
         }
     }
