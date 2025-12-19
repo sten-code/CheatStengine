@@ -6,6 +6,6 @@ std::shared_ptr<spdlog::logger> Logger::s_Logger;
 
 void Logger::Init()
 {
-    s_Logger = spdlog::stdout_color_mt("CheatEngine");
+    s_Logger = spdlog::stdout_color_mt("CheatStengine");
     s_Logger->set_level(spdlog::level::trace);
 }
