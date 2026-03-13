@@ -31,7 +31,7 @@ struct FormattedInstruction {
 class Formatter {
 public:
     struct Options {
-        std::function<std::string(int64_t)> ImmediateFormatter;
+        std::function<std::string(uint64_t)> ImmediateFormatter;
     };
 
     static FormattedInstruction Format(const zasm::Instruction& instr, const Options& opts = {});

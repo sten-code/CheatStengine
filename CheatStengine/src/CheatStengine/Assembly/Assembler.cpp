@@ -22,6 +22,7 @@ namespace Assembly {
     const Token& Assembler::At(size_t index) const
     {
         if (m_CurrentPos + index >= m_Tokens.size()) {
+            ERR("Token index out of range: current position {}, index {}, total tokens {}", m_CurrentPos, index, m_Tokens.size());
             throw std::out_of_range("Token index out of range");
         }
         return m_Tokens[m_CurrentPos + index];
@@ -30,6 +31,7 @@ namespace Assembly {
     const Token& Assembler::Eat()
     {
         if (m_CurrentPos >= m_Tokens.size()) {
+            ERR("Token index out of range: current position {}, total tokens {}", m_CurrentPos, m_Tokens.size());
             throw std::out_of_range("Token index out of range");
         }
         return m_Tokens[m_CurrentPos++];
@@ -38,29 +40,36 @@ namespace Assembly {
     const Token& Assembler::Expect(TokenType type)
     {
         if (At().Type != type) {
+            ERR("Expected token type {}, got token type {}", static_cast<int>(type), static_cast<int>(At().Type));
             throw std::runtime_error("Unexpected token");
         }
         return Eat();
     }
 
-    void Assembly::Assembler::Tokenize()
+    static bool IsHexDigit(char c)
+    {
+        return isdigit(c) || (tolower(c) >= 'a' && tolower(c) <= 'f');
+    }
+
+    void Assembler::Tokenize()
     {
         size_t pos = 0;
         while (pos < m_Source.size()) {
             // Skip whitespace
-            if (isspace(m_Source[pos])) {
+            char c = m_Source[pos];
+            if (isspace(c)) {
                 pos++;
                 continue;
             }
 
-            if (isalpha(m_Source[pos])) {
+            if (isalpha(c)) {
                 size_t start = pos;
                 while (pos < m_Source.size() && isalnum(m_Source[pos])) {
                     pos++;
                 }
 
                 std::string identifier = m_Source.substr(start, pos - start);
-                std::transform(identifier.begin(), identifier.end(), identifier.begin(), ::tolower);
+                std::ranges::transform(identifier, identifier.begin(), ::tolower);
                 if (ZydisMnemonic mnemonic = Mnemonic::FromString(identifier); mnemonic != ZYDIS_MNEMONIC_INVALID) {
                     m_Tokens.push_back(Token { TokenType::Mnemonic, { .Mnemonic = mnemonic } });
                 } else if (ZydisRegister reg = Register::FromString(identifier); reg != ZYDIS_REGISTER_NONE) {
@@ -68,8 +77,17 @@ namespace Assembly {
                 } else if (zasm::BitSize bitSize = BitSize::FromString(identifier); bitSize != zasm::BitSize::_0) {
                     m_Tokens.push_back(Token { TokenType::BitSize, { .BitSize = bitSize } });
                 } else {
-                    throw std::runtime_error("Unknown identifier: " + identifier);
+                    ERR("Unknown identifier: {}", identifier);
                 }
+            } else if (pos + 1 < m_Source.size() && m_Source[pos] == '0' && m_Source[pos + 1] == 'x') {
+                pos += 2; // Skip '0x'
+                size_t start = pos;
+                while (pos < m_Source.size() && IsHexDigit(m_Source[pos])) {
+                    pos++;
+                }
+                std::string immStr = m_Source.substr(start, pos - start);
+                int64_t immVal = std::stoll(immStr, nullptr, 16);
+                m_Tokens.push_back(Token { TokenType::Immediate, { .Imm = zasm::Imm(immVal) } });
             } else if (isdigit(m_Source[pos]) || (m_Source[pos] == '-' && isdigit(m_Source[pos + 1]))) {
                 size_t start = pos;
                 if (m_Source[pos] == '-') {
@@ -108,7 +126,8 @@ namespace Assembly {
     {
         const Token& mnemonicToken = Eat();
         if (mnemonicToken.Type != TokenType::Mnemonic) {
-            throw std::runtime_error("Expected mnemonic");
+            ERR("Expected mnemonic, got token type {}", static_cast<int>(mnemonicToken.Type));
+            return;
         }
         zasm::Instruction::Operands operands;
         size_t operandCount = 0;

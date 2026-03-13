@@ -76,18 +76,14 @@ void Formatter::OpToString(const zasm::Reg& reg)
 
 void Formatter::OpToString(const zasm::Imm& opImm)
 {
-    int64_t val = opImm.value<int64_t>();
+    uint64_t val = opImm.value<uint64_t>();
     if (m_Options.ImmediateFormatter) {
         std::string formatted = m_Options.ImmediateFormatter(val);
         AppendStringHighlight(formatted, Highlight::Ty::Immediate);
         return;
     }
 
-    if (val < 0) {
-        AppendStringHighlight(std::format("-0x{:X}", -val), Highlight::Ty::Immediate);
-    } else {
-        AppendStringHighlight(std::format("0x{:X}", val), Highlight::Ty::Immediate);
-    }
+    AppendStringHighlight(std::format("0x{:X}", val), Highlight::Ty::Immediate);
 }
 
 void Formatter::OpToString(const zasm::Label& label)
