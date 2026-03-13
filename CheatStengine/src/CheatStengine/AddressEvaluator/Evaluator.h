@@ -3,14 +3,17 @@
 #include "Ast.h"
 #include "Error.h"
 
+#include <CheatStengine/Core/Process.h>
+
 #include <unordered_map>
 
 namespace AddressEvaluator {
 
     class EvalVisitor final : public Visitor<Result> {
     public:
-        explicit EvalVisitor(const std::unordered_map<std::string, uintptr_t>& identifiers)
+        explicit EvalVisitor(const std::unordered_map<std::string, uintptr_t>& identifiers, Process& process)
             : m_Identifiers(identifiers)
+            , m_Process(process)
         {
         }
 
@@ -20,8 +23,9 @@ namespace AddressEvaluator {
 
     private:
         const std::unordered_map<std::string, uintptr_t>& m_Identifiers;
+        Process& m_Process;
     };
 
-    Result Evaluate(const std::string& source, const std::unordered_map<std::string, uintptr_t>& identifiers);
+    Result Evaluate(const std::string& source, Process& process);
 
 }

@@ -21,6 +21,7 @@ namespace AddressEvaluator {
         Expr& GetExpression() const { return *m_Expression; }
 
     private:
+        std::unique_ptr<Expr> ParseArrowOp();
         std::unique_ptr<Expr> ParseAdditiveBinOp();
         std::unique_ptr<Expr> ParseMultiplicativeBinOp();
         std::unique_ptr<Expr> ParsePrimary();

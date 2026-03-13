@@ -6,23 +6,6 @@
 
 #include <Engine/Core/Core.h>
 
-struct AddElementPayload {
-    uintptr_t Offset;
-    Field& Field;
-};
-
-struct EditValuePayload {
-    uintptr_t Address;
-    Field& Field;
-    FieldValue CurrentValue;
-};
-
-struct ChangeSizePayload {
-    size_t CurrentSize;
-    uintptr_t Address;
-    Field& Field;
-};
-
 class StructDissectPane final : public Pane {
 public:
     explicit StructDissectPane(State& state, ModalManager& modalManager);

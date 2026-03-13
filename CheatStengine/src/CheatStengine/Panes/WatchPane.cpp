@@ -153,14 +153,7 @@ void WatchPane::AddAddressModal(const std::string& name, const std::any& payload
         }
 
         if (ImGui::Button("OK")) {
-            std::unordered_map<std::string, uintptr_t> identifiers;
-            for (const MODULEENTRY32& entry : m_State.Modules) {
-                std::string name = entry.szModule;
-                std::ranges::transform(name, name.begin(), ::tolower);
-                identifiers[name] = reinterpret_cast<uintptr_t>(entry.modBaseAddr);
-            }
-
-            AddressEvaluator::Result result = AddressEvaluator::Evaluate(m_AddressInput, identifiers);
+            AddressEvaluator::Result result = AddressEvaluator::Evaluate(m_AddressInput, m_State.Process);
             if (!result.IsError()) {
                 uintptr_t address = result.Value;
                 INFO("Going to address: 0x{:X}", address);

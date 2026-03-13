@@ -15,6 +15,7 @@ namespace AddressEvaluator {
         Sub,
         Div,
         Mul,
+        Arrow,
     };
 
     struct Token {
@@ -32,6 +33,7 @@ namespace AddressEvaluator {
             case TokenType::Sub: os << "Sub"; break;
             case TokenType::Mul: os << "Mul"; break;
             case TokenType::Div: os << "Div"; break;
+            case TokenType::Arrow: os << "Arrow"; break;
             default: os << "Unknown"; break;
         }
         return os;
@@ -48,6 +50,7 @@ namespace AddressEvaluator {
             case TokenType::Sub: os << "-"; break;
             case TokenType::Mul: os << "*"; break;
             case TokenType::Div: os << "/"; break;
+            case TokenType::Arrow: os << "->"; break;
             default: os << "Unknown"; break;
         }
         os << ")";

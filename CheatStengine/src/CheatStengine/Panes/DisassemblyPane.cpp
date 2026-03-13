@@ -28,10 +28,21 @@ DisassemblyPane::DisassemblyPane(State& state, ModalManager& modalManager)
 void DisassemblyPane::HandleKeybinds()
 {
     // Handle 'G' key to open the goto address popup
-    if (ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows)
-        && ImGui::IsKeyPressed(ImGuiKey_G)) {
-        m_AddressInput.clear();
-        m_ModalManager.OpenModal("Goto Address");
+    if (ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows)) {
+        if (ImGui::IsKeyPressed(ImGuiKey_G)) {
+            m_AddressInput.clear();
+            m_ModalManager.OpenModal("Goto Address");
+        }
+        if (ImGui::IsKeyPressed(ImGuiKey_Space)) {
+            auto it = m_Instructions.find(m_FocussedAddress);
+            if (it != m_Instructions.end()) {
+                const DisassemblyLine& line = it->second;
+                const zasm::InstructionDetail* detail = std::get_if<zasm::InstructionDetail>(&line.Value);
+                if (detail) {
+                    JumpToPointedInstruction(detail->getInstruction());
+                }
+            }
+        }
     }
 }
 
@@ -45,8 +56,8 @@ void DisassemblyPane::Analyze(uintptr_t address)
     }
 
     uintptr_t start = reinterpret_cast<uintptr_t>(mbi->BaseAddress);
-    INFO("  Start: 0x{:X}, Size: 0x{:X}", start, mbi->RegionSize);
-    AnalyzePage(start, mbi->RegionSize);
+    INFO("  Start: 0x{:X}, Size: 0x{:X}", start, 0x1000);
+    AnalyzePage(start, 0x1000);
 }
 
 void DisassemblyPane::AnalyzePage(uintptr_t pageAddr, size_t pageSize)
@@ -147,7 +158,7 @@ void DisassemblyPane::Draw()
                     [this, &rowMin, &rowMax](const zasm::InstructionDetail& instrDetail) -> std::pair<std::string, size_t> {
                         const zasm::Instruction instr = instrDetail.getInstruction();
 
-                        FormattedInstruction formatted = Formatter::Format(instr, Formatter::Options { .ImmediateFormatter = [this](int64_t val) {
+                        FormattedInstruction formatted = Formatter::Format(instr, Formatter::Options { .ImmediateFormatter = [this](uint64_t val) {
                             std::optional<MODULEENTRY32> modEntry = Utils::GetModuleForAddress(val, m_State.Modules);
                             if (modEntry) {
                                 return std::format("{}+0x{:X}", modEntry->szModule, val - reinterpret_cast<uintptr_t>(modEntry->modBaseAddr));
@@ -238,6 +249,7 @@ void DisassemblyPane::Draw()
 
 void DisassemblyPane::FocusAddress(uintptr_t address)
 {
+    INFO("Focusing address: 0x{:X}", address);
     m_FocussedAddress = address;
     if (!m_Instructions.contains(address)) {
         Analyze(address);
@@ -269,9 +281,14 @@ void DisassemblyPane::AssembleModal(const std::string& name, const std::any& pay
             }
 
             zasm::Serializer serializer;
-            auto res = serializer.serialize(program, 0);
+            zasm::Error res = serializer.serialize(program, 0);
             const uint8_t* code = serializer.getCode();
             size_t codeSize = serializer.getCodeSize();
+
+            // for (size_t i = 0; i < codeSize; i++) {
+            //     INFO("Byte {:d}: 0x{:02X}", i, code[i]);
+            // }
+
             m_State.Process.WriteBuffer(m_SelectedAddress, code, codeSize);
             Analyze(m_SelectedAddress);
             ImGui::CloseCurrentPopup();
@@ -286,14 +303,7 @@ void DisassemblyPane::AssembleModal(const std::string& name, const std::any& pay
 
 void DisassemblyPane::GotoAddressInput()
 {
-    std::unordered_map<std::string, uintptr_t> identifiers;
-    for (const MODULEENTRY32& entry : m_State.Modules) {
-        std::string name = entry.szModule;
-        std::ranges::transform(name, name.begin(), ::tolower);
-        identifiers[name] = reinterpret_cast<uintptr_t>(entry.modBaseAddr);
-    }
-
-    AddressEvaluator::Result result = AddressEvaluator::Evaluate(m_AddressInput, identifiers);
+    AddressEvaluator::Result result = AddressEvaluator::Evaluate(m_AddressInput, m_State.Process);
     if (result.IsError()) {
         return;
     }
@@ -302,6 +312,22 @@ void DisassemblyPane::GotoAddressInput()
     INFO("Going to address: 0x{:X}", address);
     FocusAddress(address);
     m_SelectedAddress = address;
+}
+
+void DisassemblyPane::JumpToPointedInstruction(const zasm::Instruction& instr)
+{
+    INFO("Jumping to pointed instruction...");
+    if (instr.getOperandCount() != 1) {
+        return;
+    }
+
+    zasm::Operand op = instr.getOperand(0);
+    zasm::Imm* imm = op.getIf<zasm::Imm>();
+    if (!imm) {
+        return;
+    }
+
+    FocusAddress(imm->value<uintptr_t>());
 }
 
 void DisassemblyPane::GotoAddressModal(const std::string& name, const std::any& payload)

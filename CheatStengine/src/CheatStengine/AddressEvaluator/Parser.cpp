@@ -17,6 +17,16 @@ namespace AddressEvaluator {
         m_Expression = ParseAdditiveBinOp();
     }
 
+    std::unique_ptr<Expr> Parser::ParseArrowOp()
+    {
+        return ParseBinaryOp(&Parser::ParsePrimary,
+            [](TokenType t) -> std::optional<Operation> {
+                if (t == TokenType::Arrow)
+                    return Operation::Arrow;
+                return std::nullopt;
+            });
+    }
+
     std::unique_ptr<Expr> Parser::ParseAdditiveBinOp()
     {
         return ParseBinaryOp(&Parser::ParseMultiplicativeBinOp,
@@ -31,7 +41,7 @@ namespace AddressEvaluator {
 
     std::unique_ptr<Expr> Parser::ParseMultiplicativeBinOp()
     {
-        return ParseBinaryOp(&Parser::ParsePrimary,
+        return ParseBinaryOp(&Parser::ParseArrowOp,
             [](TokenType t) -> std::optional<Operation> {
                 if (t == TokenType::Mul)
                     return Operation::Mul;

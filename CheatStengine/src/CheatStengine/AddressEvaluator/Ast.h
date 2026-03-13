@@ -21,6 +21,7 @@ namespace AddressEvaluator {
         Sub,
         Mul,
         Div,
+        Arrow
     };
 
     struct BinaryExpr {
@@ -61,6 +62,8 @@ namespace AddressEvaluator {
             case Operation::Sub: os << "-"; break;
             case Operation::Mul: os << "*"; break;
             case Operation::Div: os << "/"; break;
+            case Operation::Arrow: os << "->"; break;
+            default: os << "Unknown"; break;
         }
         return os;
     }

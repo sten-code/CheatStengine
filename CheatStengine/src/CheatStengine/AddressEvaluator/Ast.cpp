@@ -8,7 +8,7 @@ namespace AddressEvaluator {
     {
         std::cout << "(";
         std::visit(*this, *expr.Left);
-        std::cout << " " << expr.Op << " ";
+        std::cout << expr.Op;
         std::visit(*this, *expr.Right);
         std::cout << ")";
     }

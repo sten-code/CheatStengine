@@ -56,7 +56,14 @@ namespace AddressEvaluator {
             } else {
                 switch (c) {
                     case '+': m_Tokens.push_back(Token { TokenType::Add, {} }); break;
-                    case '-': m_Tokens.push_back(Token { TokenType::Sub, {} }); break;
+                    case '-':
+                        if (m_Position < m_Source.size() && m_Source[m_Position] == '>') {
+                            m_Position++;
+                            m_Tokens.push_back(Token { TokenType::Arrow, {} });
+                            break;
+                        }
+                        m_Tokens.push_back(Token { TokenType::Sub, {} });
+                        break;
                     case '*': m_Tokens.push_back(Token { TokenType::Mul, {} }); break;
                     case '/': m_Tokens.push_back(Token { TokenType::Div, {} }); break;
                     default: ERR("Unknown character in lexer: '{}'", c); break;

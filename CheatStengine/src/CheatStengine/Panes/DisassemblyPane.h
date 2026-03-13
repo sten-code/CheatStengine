@@ -39,6 +39,7 @@ private:
     static void DrawFormattedInstruction(const FormattedInstruction& instr);
 
     void GotoAddressInput();
+    void JumpToPointedInstruction(const zasm::Instruction& instr);
 
     void AssembleModal(const std::string& name, const std::any& payload);
     void GotoAddressModal(const std::string& name, const std::any& payload);

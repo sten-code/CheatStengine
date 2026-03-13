@@ -31,14 +31,7 @@ MainLayer::MainLayer(Window& window)
     AddPane<DisassemblyPane>(m_State, m_ModalManager);
     StructDissectPane& structDissectPane = AddPane<StructDissectPane>(m_State, m_ModalManager);
 
-    std::unordered_map<std::string, uintptr_t> identifiers;
-    for (const MODULEENTRY32& entry : m_State.Process.GetModuleEntries()) {
-        std::string moduleName = entry.szModule;
-        std::ranges::transform(moduleName, moduleName.begin(), ::tolower);
-        identifiers[moduleName] = reinterpret_cast<uintptr_t>(entry.modBaseAddr);
-    }
-
-    AddressEvaluator::Result result = AddressEvaluator::Evaluate("robloxplayerbeta.exe+0x7D02728", identifiers);
+    AddressEvaluator::Result result = AddressEvaluator::Evaluate("robloxplayerbeta.exe+0x7D02728", m_State.Process);
     if (!result.IsError()) {
         structDissectPane.AddDissection("FakeDataModel", result.Value);
     }

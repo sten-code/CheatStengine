@@ -10,6 +10,23 @@
 #include <imgui.h>
 #include <imgui_stdlib.h>
 
+struct AddElementPayload {
+    uintptr_t Offset;
+    Field& Field;
+};
+
+struct EditValuePayload {
+    uintptr_t Address;
+    Field& Field;
+    FieldValue CurrentValue;
+};
+
+struct ChangeSizePayload {
+    size_t CurrentSize;
+    uintptr_t Address;
+    Field& Field;
+};
+
 std::string StructDissectPane::FormatFieldValue(const FieldValue& fieldValue, const Field& field)
 {
     overloads visitor {
@@ -496,14 +513,7 @@ void StructDissectPane::AddDissectionModal(const std::string& name, const std::a
         }
 
         if (commitNow || ImGui::Button("OK", ImVec2 { 70.0f, 0 })) {
-            std::unordered_map<std::string, uintptr_t> identifiers;
-            for (const MODULEENTRY32& entry : m_State.Modules) {
-                std::string moduleName = entry.szModule;
-                std::ranges::transform(moduleName, moduleName.begin(), ::tolower);
-                identifiers[moduleName] = reinterpret_cast<uintptr_t>(entry.modBaseAddr);
-            }
-
-            AddressEvaluator::Result result = AddressEvaluator::Evaluate(addressInput, identifiers);
+            AddressEvaluator::Result result = AddressEvaluator::Evaluate(addressInput, m_State.Process);
             if (!result.IsError()) {
                 uintptr_t address = result.Value;
                 AddDissection(dissectionName, address);
