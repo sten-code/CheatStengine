@@ -1,6 +1,9 @@
 #include "Process.h"
 
 #include <Engine/Core/Log.h>
+
+#include <Psapi.h>
+
 #include <algorithm>
 #include <charconv>
 #include <iostream>
@@ -123,6 +126,15 @@ std::vector<Process::Window> Process::EnumerateApplications()
         apps.emplace_back(hwnd, windowPid, title.data());
     }
     return apps;
+}
+
+std::string Process::GetName() const
+{
+    char buffer[MAX_PATH];
+    if (GetModuleBaseNameA(m_Handle, nullptr, buffer, sizeof(buffer))) {
+        return buffer;
+    }
+    return {};
 }
 
 MODULEENTRY32 Process::GetModuleEntry(const std::string& name) const

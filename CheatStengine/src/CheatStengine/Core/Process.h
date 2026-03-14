@@ -41,6 +41,8 @@ public:
     static std::vector<Window> EnumerateWindows();
     static std::vector<Window> EnumerateApplications();
 
+    std::string GetName() const;
+
     /// <summary>
     /// Finds a module by name.
     /// </summary>
