@@ -20,7 +20,7 @@ MainLayer::MainLayer(Window& window)
     : Layer("MainLayer")
     , m_Window(window)
     , m_MenuBar(*this, m_ModalManager)
-    , m_TitleBar(window)
+    , m_TitleBar(window, m_State)
 {
     m_State.Process = Process("RobloxPlayerBeta.exe");
     m_ModalManager.RegisterModal("Open Process", BIND_FN(MainLayer::OpenProcessModal));
@@ -31,15 +31,14 @@ MainLayer::MainLayer(Window& window)
     AddPane<DisassemblyPane>(m_State, m_ModalManager);
     StructDissectPane& structDissectPane = AddPane<StructDissectPane>(m_State, m_ModalManager);
 
-    AddressEvaluator::Result result = AddressEvaluator::Evaluate("robloxplayerbeta.exe+0x7D02728", m_State.Process);
-    if (!result.IsError()) {
-        structDissectPane.AddDissection("FakeDataModel", result.Value);
-    }
+    // AddressEvaluator::Result result = AddressEvaluator::Evaluate("robloxplayerbeta.exe+0x7D02728", m_State.Process);
+    // if (!result.IsError()) {
+    //     structDissectPane.AddDissection("FakeDataModel", result.Value);
+    // }
 }
 
 void MainLayer::OnAttach()
 {
-    // GetPane<DisassemblyPane>()->Analyze(0);
 }
 
 void MainLayer::OnUpdate(float deltaTime)
