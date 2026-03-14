@@ -29,8 +29,12 @@ bool TitleBar::Draw()
 
     ImGui::InvisibleButton("##titleBarDragZone",
         ImVec2(width - BUTTON_WIDTH * 3 + buttonRightOffset, TITLEBAR_HEIGHT));
-
     bool titleBarHovered = ImGui::IsItemHovered();
+
+    std::string title = std::format("{:08X}-{}", reinterpret_cast<uint64_t>(m_State.Process.GetHandle()), m_State.Process.GetName());
+    ImVec2 textSize = ImGui::CalcTextSize(title.c_str());
+    ImGui::SetCursorPos(ImVec2(width / 2.0f - textSize.x / 2.0f, titlebarVerticalOffset + TITLEBAR_HEIGHT / 2.0f - ImGui::GetTextLineHeight() / 2.0f));
+    ImGui::Text(title.c_str());
 
     Fonts::Push(Fonts::Type::Codicon);
     ImGui::PushStyleColor(ImGuiCol_Button, 0);
