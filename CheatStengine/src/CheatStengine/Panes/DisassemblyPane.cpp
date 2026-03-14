@@ -34,7 +34,7 @@ void DisassemblyPane::HandleKeybinds()
             m_ModalManager.OpenModal("Goto Address");
         }
         if (ImGui::IsKeyPressed(ImGuiKey_Space)) {
-            auto it = m_Instructions.find(m_FocussedAddress);
+            auto it = m_Instructions.find(m_SelectedAddress);
             if (it != m_Instructions.end()) {
                 const DisassemblyLine& line = it->second;
                 const zasm::InstructionDetail* detail = std::get_if<zasm::InstructionDetail>(&line.Value);
@@ -67,7 +67,7 @@ void DisassemblyPane::AnalyzePage(uintptr_t pageAddr, size_t pageSize)
 
     uintptr_t bytesDecoded = 0;
     while (bytesDecoded < code.size()) {
-        const zasm::Decoder::Result res = m_Decoder.decode(code.data() + bytesDecoded, code.size() - bytesDecoded, pageAddr + bytesDecoded);
+        zasm::Decoder::Result res = m_Decoder.decode(code.data() + bytesDecoded, code.size() - bytesDecoded, pageAddr + bytesDecoded);
         if (!res.hasValue()) {
             m_Decoder = zasm::Decoder(m_Decoder.getMode());
             m_Instructions[pageAddr + bytesDecoded] = DisassemblyLine { { code[bytesDecoded] }, std::monostate {} };
@@ -76,14 +76,25 @@ void DisassemblyPane::AnalyzePage(uintptr_t pageAddr, size_t pageSize)
             continue;
         }
 
-        const zasm::InstructionDetail& instrDetail = res.value();
-        std::vector<uint8_t> instrBytes(code.begin() + bytesDecoded, code.begin() + bytesDecoded + instrDetail.getLength());
-        m_Instructions[pageAddr + bytesDecoded] = DisassemblyLine { instrBytes, instrDetail };
+        zasm::InstructionDetail& detail = res.value();
+        zasm::Mem* mem0 = detail.getOperand(0).getIf<zasm::Mem>();
+        if (mem0 && static_cast<ZydisRegister>(mem0->getBase().getId()) == ZYDIS_REGISTER_RIP && mem0->getDisplacement() == pageAddr + bytesDecoded + detail.getLength()) {
+            uint64_t targetAddr = *reinterpret_cast<uint64_t*>(code.data() + bytesDecoded + detail.getLength());
+            detail = zasm::InstructionDetail(
+                detail.getAttribs(),
+                detail.getMnemonic(),
+                detail.getOperandCount(), detail.getOperands(), detail.getOperandsAccess(),
+                detail.getOperandsVisibility(), detail.getCPUFlags(), detail.getCategory(), detail.getLength() + 8);
+            detail.setOperand(0, zasm::Imm { targetAddr });
+        }
+
+        std::vector<uint8_t> instrBytes(code.begin() + bytesDecoded, code.begin() + bytesDecoded + detail.getLength());
+        m_Instructions[pageAddr + bytesDecoded] = DisassemblyLine { instrBytes, detail };
         // const zasm::Instruction instr = instrDetail.getInstruction();
         // std::string formatted = zasm::formatter::toString(&instr);
         // INFO("0x{:X} (0x{:X}): {}", pageAddr + bytesDecoded, bytesDecoded, formatted);
 
-        bytesDecoded += instrDetail.getLength();
+        bytesDecoded += detail.getLength();
     }
 }
 
@@ -249,7 +260,6 @@ void DisassemblyPane::Draw()
 
 void DisassemblyPane::FocusAddress(uintptr_t address)
 {
-    INFO("Focusing address: 0x{:X}", address);
     m_FocussedAddress = address;
     if (!m_Instructions.contains(address)) {
         Analyze(address);
@@ -321,13 +331,16 @@ void DisassemblyPane::JumpToPointedInstruction(const zasm::Instruction& instr)
         return;
     }
 
+    INFO("Instruction has 1 operand, checking if it's an immediate...");
     zasm::Operand op = instr.getOperand(0);
     zasm::Imm* imm = op.getIf<zasm::Imm>();
     if (!imm) {
         return;
     }
 
-    FocusAddress(imm->value<uintptr_t>());
+    uintptr_t address = imm->value<uintptr_t>();
+    FocusAddress(address);
+    m_SelectedAddress = address;
 }
 
 void DisassemblyPane::GotoAddressModal(const std::string& name, const std::any& payload)
