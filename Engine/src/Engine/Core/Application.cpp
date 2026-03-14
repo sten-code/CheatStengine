@@ -5,8 +5,6 @@
 #include "imgui.h"
 #endif
 
-#include <iostream>
-
 Application::Application(const WindowProps& windowProps)
     : m_Window(Window::Create(windowProps))
 {
