@@ -1,5 +1,6 @@
 #pragma once
 
+#include <utility>
 #include <zasm/zasm.hpp>
 
 #include <format>
@@ -37,8 +38,8 @@ public:
     static FormattedInstruction Format(const zasm::Instruction& instr, const Options& opts = {});
 
     Formatter() = delete;
-    explicit Formatter(const Options& opts)
-        : m_Options(opts)
+    explicit Formatter(Options opts)
+        : m_Options(std::move(opts))
     {
     }
 
