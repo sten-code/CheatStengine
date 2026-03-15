@@ -419,13 +419,13 @@ void StructDissectPane::DrawField(Field& field, uintptr_t baseAddress, size_t de
     clipper.Begin(static_cast<int>(rowsToRender.size()));
 
     if (m_SearchResultIndex != -1) {
-        int visible_start = clipper.DisplayStart;
-        int visible_end = clipper.DisplayEnd;
+        int visibleStart = clipper.DisplayStart;
+        int visibleEnd = clipper.DisplayEnd;
 
-        if (m_SearchResultIndex < visible_start || m_SearchResultIndex >= visible_end) {
+        if (m_SearchResultIndex < visibleStart || m_SearchResultIndex >= visibleEnd) {
             // Adjust scroll to make the item visible
-            float target_scroll = m_SearchResultIndex * 24.0f;
-            ImGui::SetScrollY(target_scroll);
+            float targetScroll = m_SearchResultIndex * 24.0f;
+            ImGui::SetScrollY(targetScroll);
             for (size_t i = 0; i < rowsToRender.size(); i++) {
                 rowsToRender[i].Selected = (i == m_SearchResultIndex);
                 if (i == m_SearchResultIndex) {
