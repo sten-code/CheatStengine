@@ -2,18 +2,22 @@
 #include "MenuBar.h"
 
 #include <CheatStengine/Icons/FontAwesome6.h>
+#include <CheatStengine/Icons/MaterialDesignIcons.h>
 #include <CheatStengine/MainLayer.h>
 #include <CheatStengine/UI/ImGui/Fonts.h>
 #include <CheatStengine/UI/ImGui/Menu.h>
 #include <CheatStengine/UI/TitleBar.h>
 #include <Engine/Core/Application.h>
 
+#include <CheatStengine/Panes/DisassemblyPane.h>
 #include <imgui.h>
+#include <imgui_stdlib.h>
 
 MenuBar::MenuBar(MainLayer& mainLayer, ModalManager& modalManager)
     : m_MainLayer(mainLayer)
     , m_ModalManager(modalManager)
 {
+    m_ModalManager.RegisterModal("Allocate Memory", BIND_FN(MenuBar::AllocateMemoryModal));
 }
 
 void MenuBar::Draw()
@@ -45,6 +49,13 @@ void MenuBar::Draw()
             }
 
             ImGui::PopStyleVar();
+            ImGui::EndMenu();
+        }
+
+        if (ImGui::BeginMenu("Tools")) {
+            if (ImGui::RoundedMenuItemEx("Allocate Memory", ICON_MDI_PLUS_BOX, "Ctrl+Alt+M")) {
+                m_ModalManager.OpenModal("Allocate Memory");
+            }
             ImGui::EndMenu();
         }
     }
@@ -132,4 +143,48 @@ void MenuBar::EndMenubar()
     window->DC.LayoutType = ImGuiLayoutType_Vertical;
     window->DC.NavLayerCurrent = ImGuiNavLayer_Main;
     window->DC.MenuBarAppending = false;
+}
+
+void MenuBar::AllocateMemoryModal(const std::string& name, const std::any& payload) const
+{
+    static std::string sizeInput;
+
+    ImGui::SetNextWindowPos(ImGui::GetMainViewport()->GetCenter(), ImGuiCond_Appearing, ImVec2 { 0.5f, 0.5f });
+    if (ImGui::BeginPopupModal(name.c_str(), nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
+        if (ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows)
+            && ImGui::IsKeyPressed(ImGuiKey_Escape)) {
+            ImGui::CloseCurrentPopup();
+        }
+
+        ImGui::Text("How much memory do you want to allocate?");
+        if (ImGui::IsWindowAppearing()) {
+            sizeInput = "4096";
+            ImGui::SetKeyboardFocusHere();
+        }
+
+        bool allocate = false;
+        if (ImGui::InputText("Size", &sizeInput, ImGuiInputTextFlags_EnterReturnsTrue)) {
+            allocate = true;
+            ImGui::CloseCurrentPopup();
+        }
+
+        if (ImGui::Button("OK", ImVec2 { 70.0f, 0 })) {
+            allocate = true;
+            ImGui::CloseCurrentPopup();
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("Cancel", ImVec2 { 70.0f, 0 })) {
+            ImGui::CloseCurrentPopup();
+        }
+
+        ImGui::EndPopup();
+        if (allocate) {
+            try {
+                size_t size = std::stoull(sizeInput);
+                uintptr_t address = m_MainLayer.m_State.Process.Allocate(size, PAGE_READWRITE);
+                m_MainLayer.GetPane<DisassemblyPane>()->FocusAddress(address);
+            } catch (const std::exception&) {
+            }
+        }
+    }
 }

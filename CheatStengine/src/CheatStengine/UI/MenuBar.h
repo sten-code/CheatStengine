@@ -16,6 +16,8 @@ private:
     bool BeginMenubar(const ImRect& barRectangle);
     void EndMenubar();
 
+    void AllocateMemoryModal(const std::string& name, const std::any& payload) const;
+
 private:
     MainLayer& m_MainLayer;
     ModalManager& m_ModalManager;
