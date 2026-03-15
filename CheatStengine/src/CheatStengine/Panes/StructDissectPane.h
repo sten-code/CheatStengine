@@ -18,8 +18,14 @@ private:
     static std::string FormatFieldValue(const FieldValue& fieldValue, const Field& field);
     static FieldValue ParseFieldValue(const std::string& str, const Field& field);
 
-    void DrawDissection(Dissection& dissection) const;
-    void DrawField(Field& field, uintptr_t baseAddress, size_t depth = 0) const;
+    void HandleKeybinds();
+    void DrawFindPopup(ImVec2 pos, float width, Dissection& dissection);
+    void OpenFindPopup();
+
+    void PerformSearch(Dissection& dissection);
+
+    void DrawDissection(Dissection& dissection);
+    void DrawField(Field& field, uintptr_t baseAddress, size_t depth = 0);
 
     bool FieldContextMenu(
         const std::string& label, Field& field,
@@ -32,4 +38,12 @@ private:
 
 private:
     ModalManager& m_ModalManager;
+    bool m_FindPopupOpened = false;
+    bool m_FocusOnFind = false;
+    bool m_FocusOnSearchResult = false;
+
+    size_t m_SearchResultIndex = -1;
+    size_t m_SearchIndex = 0;
+    size_t m_SearchDepth = 0;
+    std::string m_SearchQuery;
 };

@@ -85,6 +85,11 @@ static FieldValue ParseStartEndPointer(const std::string& str)
     return StartEndPointer { startAddr, endAddr };
 }
 
+static bool IsExpandableType(FieldType type)
+{
+    return type == FieldType::Dissection || type == FieldType::Pointer || type == FieldType::StartEndPointer;
+}
+
 FieldValue StructDissectPane::ParseFieldValue(const std::string& str, const Field& field)
 {
     if (field.Type == FieldType::String) {
@@ -114,6 +119,188 @@ FieldValue StructDissectPane::ParseFieldValue(const std::string& str, const Fiel
     return {};
 }
 
+void StructDissectPane::HandleKeybinds()
+{
+    if (ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows)) {
+        if (ImGui::IsKeyChordPressed(ImGuiMod_Ctrl | ImGuiKey_F)) {
+            OpenFindPopup();
+        }
+    }
+}
+
+void StructDissectPane::DrawFindPopup(ImVec2 pos, float width, Dissection& dissection)
+{
+    if (!m_FindPopupOpened) {
+        return;
+    }
+
+    static std::string findButtonLabel = "Find Next";
+    static std::string findAllButtonLabel = "Find All";
+
+    ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(6.0f, 4.0f));
+    ImGuiStyle& style = ImGui::GetStyle();
+    float fieldWidth = 250.0f;
+
+    float button1Width = ImGui::CalcTextSize(findButtonLabel.c_str()).x + style.ItemSpacing.x * 2.0f;
+    float optionWidth = ImGui::CalcTextSize("Aa").x + style.ItemSpacing.x * 2.0f;
+
+    float windowHeight = style.ChildBorderSize * 2.0f + style.WindowPadding.y * 2.0f + ImGui::GetFrameHeight();
+    float windowWidth = style.ChildBorderSize * 2.0f
+        + style.WindowPadding.x * 2.0f
+        + fieldWidth + style.ItemSpacing.x
+        + button1Width + style.ItemSpacing.x
+        + optionWidth * 2.0f
+        + style.ItemSpacing.x;
+
+    ImGui::SetNextWindowPos(ImVec2(
+        pos.x + width - windowWidth - style.ItemSpacing.x,
+        pos.y + style.ItemSpacing.y * 2.0f));
+
+    ImGui::SetNextWindowSize(ImVec2(windowWidth, windowHeight));
+
+    ImGui::BeginChild("find-popup", ImVec2(windowWidth, windowHeight), ImGuiChildFlags_Borders);
+    ImGui::SetNextItemWidth(fieldWidth);
+
+    if (m_FocusOnFind) {
+        ImGui::SetKeyboardFocusHere();
+        m_FocusOnFind = false;
+    }
+
+    if (ImGui::InputText("###find", &m_SearchQuery, ImGuiInputTextFlags_AutoSelectAll)) {
+        m_SearchDepth = 0;
+    }
+
+    if (ImGui::IsItemDeactivated() && (ImGui::IsKeyPressed(ImGuiKey_Enter) || ImGui::IsKeyPressed(ImGuiKey_KeypadEnter))) {
+        m_SearchIndex = ++m_SearchDepth;
+        PerformSearch(dissection);
+        INFO("Find Next: Search for \"{}\", index {}, depth {}", m_SearchQuery, m_SearchIndex, m_SearchDepth);
+    }
+
+    bool disableFindButton = m_SearchQuery.empty();
+    if (disableFindButton) {
+        ImGui::BeginDisabled();
+    }
+
+    ImGui::SameLine();
+    if (ImGui::Button(findButtonLabel.c_str(), ImVec2(button1Width, 0.0f))) {
+        m_SearchIndex = ++m_SearchDepth;
+        PerformSearch(dissection);
+        INFO("Find Next: Search for \"{}\", index {}, depth {}", m_SearchQuery, m_SearchIndex, m_SearchDepth);
+    }
+
+    if (disableFindButton) {
+        ImGui::EndDisabled();
+    }
+    ImGui::SameLine();
+
+    if (ImGui::Button("Aa", ImVec2(optionWidth, 0.0f))) {
+    }
+
+    ImGui::SameLine();
+
+    if (ImGui::Button("x", ImVec2(optionWidth, 0.0f))) {
+        m_FindPopupOpened = false;
+    }
+
+    if (ImGui::IsKeyPressed(ImGuiKey_Escape)) {
+        m_FindPopupOpened = false;
+    }
+
+    ImGui::EndChild();
+    ImGui::PopStyleVar();
+}
+
+void StructDissectPane::OpenFindPopup()
+{
+    m_FindPopupOpened = true;
+    m_FocusOnFind = true;
+}
+
+void StructDissectPane::PerformSearch(Dissection& dissection)
+{
+    struct RowInfo {
+        Field* ChildField;
+        Field* ParentField;
+        uintptr_t BaseAddress;
+        size_t ChildIndex;
+    };
+
+    // Collect all rows in a flat list
+    std::vector<RowInfo> rowsToRender;
+    std::function<void(Field&, Field*, uintptr_t, size_t)> collectRows = [&](Field& field, Field* parent, uintptr_t addr, size_t childIdx) {
+        rowsToRender.emplace_back(&field, parent, addr, childIdx);
+
+        if (IsExpandableType(field.Type) && field.Expanded) {
+            if (!field.Explored) {
+                Field::Pointed pointed = field.GetPointedAddress(m_State.Process, addr);
+                field.Children = ExploreAddress(m_State.Process, pointed.Address, pointed.Size);
+                field.Explored = true;
+            }
+
+            uintptr_t childBaseAddr = (field.Type == FieldType::Dissection)
+                ? addr + field.Offset
+                : field.GetPointedAddress(m_State.Process, addr).Address;
+
+            for (size_t i = 0; i < field.Children.size(); i++) {
+                collectRows(field.Children[i], &field, childBaseAddr, i);
+            }
+        }
+    };
+
+    collectRows(dissection.GetField(), nullptr, dissection.GetAddress(), 0);
+
+    for (size_t i = 0; i < rowsToRender.size(); i++) {
+        RowInfo& rowInfo = rowsToRender[i];
+        Field& currentField = *rowInfo.ChildField;
+        uintptr_t address = rowInfo.BaseAddress + currentField.Offset;
+
+        std::string label;
+        if (currentField.Name.empty()) {
+            label = std::format(
+                "0x{:04X} - {} {} {}",
+                currentField.Offset, currentField.Size, currentField.Size == 1 ? "Byte" : "Bytes",
+                currentField.Type);
+        } else {
+            label = std::format(
+                "0x{:04X} - {} {} {}",
+                currentField.Offset, currentField.Size, currentField.Size == 1 ? "Byte" : "Bytes",
+                currentField.Name);
+        }
+
+        FieldValue value = currentField.ReadField(m_State.Process, rowInfo.BaseAddress);
+
+        auto matchAndConsume = [&](const std::string& text) -> bool {
+            if (m_SearchIndex == 0)
+                return false;
+            if (text.find(m_SearchQuery) == std::string::npos)
+                return false;
+            return --m_SearchIndex == 0;
+        };
+
+        if (matchAndConsume(label)) {
+            INFO("Found search result: {}", label);
+            m_FocusOnSearchResult = true;
+            m_SearchResultIndex = i;
+        }
+
+        if (currentField.Type != FieldType::Dissection) {
+            std::string formattedValue = FormatFieldValue(value, currentField);
+            std::string formatted = std::format("{} : 0x{:X}", formattedValue, address);
+            ImGui::Text("%s", formatted.c_str());
+            if (matchAndConsume(formatted)) {
+                INFO("Found search result: {}", formatted);
+                m_FocusOnSearchResult = true;
+                m_SearchResultIndex = i;
+            }
+        }
+    }
+
+    if (m_SearchResultIndex == -1) {
+        m_SearchDepth = 0;
+        INFO("No search results found for \"{}\"", m_SearchQuery);
+    }
+}
+
 StructDissectPane::StructDissectPane(State& state, ModalManager& modalManager)
     : Pane(ICON_MDI_CONTENT_CUT " Struct Dissect", state)
     , m_ModalManager(modalManager)
@@ -127,6 +314,10 @@ StructDissectPane::StructDissectPane(State& state, ModalManager& modalManager)
 void StructDissectPane::Draw()
 {
     ImGui::Begin(m_Name.c_str(), &m_Open);
+    ImVec2 currentScreenPosition = ImGui::GetCursorScreenPos();
+    ImVec2 paneSize = ImGui::GetContentRegionMax();
+
+    HandleKeybinds();
 
     if (ImGui::Button("New", ImVec2 { 70.0f, 0 })) {
         m_ModalManager.OpenModal("Add Dissection");
@@ -139,6 +330,7 @@ void StructDissectPane::Draw()
             bool open = true;
             if (ImGui::BeginTabItem(dissection.GetName().data(), &open)) {
                 DrawDissection(dissection);
+                DrawFindPopup(ImVec2(currentScreenPosition.x + paneSize.x - 200.0f, currentScreenPosition.y), 200.0f, dissection);
                 ImGui::EndTabItem();
             }
             if (!open) {
@@ -158,7 +350,7 @@ void StructDissectPane::AddDissection(const std::string& name, uintptr_t address
     m_State.Dissections.emplace_back(m_State.Process, name, address);
 }
 
-void StructDissectPane::DrawDissection(Dissection& dissection) const
+void StructDissectPane::DrawDissection(Dissection& dissection)
 {
     Fonts::Push(Fonts::Type::JetBrainsMono);
 
@@ -182,12 +374,7 @@ void StructDissectPane::DrawDissection(Dissection& dissection) const
     Fonts::Pop();
 }
 
-static bool IsExpandableType(FieldType type)
-{
-    return type == FieldType::Dissection || type == FieldType::Pointer || type == FieldType::StartEndPointer;
-}
-
-void StructDissectPane::DrawField(Field& field, uintptr_t baseAddress, size_t depth) const
+void StructDissectPane::DrawField(Field& field, uintptr_t baseAddress, size_t depth)
 {
     static Field* selectedField = nullptr;
 
@@ -205,7 +392,7 @@ void StructDissectPane::DrawField(Field& field, uintptr_t baseAddress, size_t de
     std::function<void(Field&, Field*, uintptr_t, size_t, size_t)> collectRows = [&](Field& field, Field* parent, uintptr_t addr, size_t depth, size_t childIdx) {
         bool selected = (&field == selectedField);
 
-        rowsToRender.push_back({ &field, parent, addr, depth, selected, childIdx });
+        rowsToRender.emplace_back(&field, parent, addr, depth, selected, childIdx);
 
         if (IsExpandableType(field.Type) && field.Expanded) {
             if (!field.Explored) {
@@ -214,7 +401,9 @@ void StructDissectPane::DrawField(Field& field, uintptr_t baseAddress, size_t de
                 field.Explored = true;
             }
 
-            uintptr_t childBaseAddr = (field.Type == FieldType::Dissection) ? addr + field.Offset : field.GetPointedAddress(m_State.Process, addr).Address;
+            uintptr_t childBaseAddr = (field.Type == FieldType::Dissection)
+                ? addr + field.Offset
+                : field.GetPointedAddress(m_State.Process, addr).Address;
 
             for (size_t i = 0; i < field.Children.size(); i++) {
                 collectRows(field.Children[i], &field, childBaseAddr, depth + 1, i);
@@ -228,6 +417,26 @@ void StructDissectPane::DrawField(Field& field, uintptr_t baseAddress, size_t de
 
     ImGuiListClipper clipper;
     clipper.Begin(static_cast<int>(rowsToRender.size()));
+
+    float top = ImGui::GetCursorPosY();
+
+    if (m_SearchResultIndex != -1) {
+        int visible_start = clipper.DisplayStart;
+        int visible_end = clipper.DisplayEnd;
+
+        if (m_SearchResultIndex < visible_start || m_SearchResultIndex >= visible_end) {
+            // Adjust scroll to make the item visible
+            float target_scroll = m_SearchResultIndex * 24.0f;
+            ImGui::SetScrollY(target_scroll);
+            for (size_t i = 0; i < rowsToRender.size(); i++) {
+                rowsToRender[i].Selected = (i == m_SearchResultIndex);
+                if (i == m_SearchResultIndex) {
+                    selectedField = rowsToRender[i].ChildField;
+                }
+            }
+        }
+        m_SearchResultIndex = -1;
+    }
 
     std::vector<bool> deleteFlags(rowsToRender.size(), false);
 
@@ -298,8 +507,8 @@ void StructDissectPane::DrawField(Field& field, uintptr_t baseAddress, size_t de
                 ImGui::SetCursorPosY(cursorY - 1.0f);
                 if (currentField.Type != FieldType::Dissection) {
                     std::string formattedValue = FormatFieldValue(value, currentField);
-                    std::string formattedAddr = std::format("0x{:X}", address);
-                    ImGui::Text("%s : %s", formattedAddr.c_str(), formattedValue.c_str());
+                    std::string formatted = std::format("0x{:X} : {}", address, formattedValue);
+                    ImGui::Text("%s", formatted.c_str());
                 }
             } else {
                 ImGui::SetCursorPosX(cursorX + static_cast<float>(rowInfo.Depth) * 16.0f + 25.0f);
@@ -309,8 +518,8 @@ void StructDissectPane::DrawField(Field& field, uintptr_t baseAddress, size_t de
                 ImGui::TableSetColumnIndex(1);
                 ImGui::SetCursorPosY(cursorY + 2.0f);
                 std::string formattedValue = FormatFieldValue(value, currentField);
-                std::string formattedAddr = std::format("0x{:X}", address);
-                ImGui::Text("%s : %s", formattedAddr.c_str(), formattedValue.c_str());
+                std::string formatted = std::format("0x{:X} : {}", address, formattedValue);
+                ImGui::Text("%s", formatted.c_str());
             }
 
             ImGui::PopID();

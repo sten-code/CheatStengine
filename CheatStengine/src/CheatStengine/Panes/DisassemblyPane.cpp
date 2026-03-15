@@ -27,7 +27,6 @@ DisassemblyPane::DisassemblyPane(State& state, ModalManager& modalManager)
 
 void DisassemblyPane::HandleKeybinds()
 {
-    // Handle 'G' key to open the goto address popup
     if (ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows)) {
         if (ImGui::IsKeyPressed(ImGuiKey_G)) {
             m_AddressInput.clear();

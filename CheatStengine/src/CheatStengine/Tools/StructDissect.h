@@ -67,6 +67,7 @@ public:
     [[nodiscard]] std::string_view GetName() const { return m_Name; }
     [[nodiscard]] uintptr_t GetAddress() const { return m_Address; }
     [[nodiscard]] Field& GetField() { return m_Field; }
+    [[nodiscard]] const Field& GetField() const { return m_Field; }
 
 private:
     std::string m_Name;
