@@ -13,11 +13,25 @@
 #include <imgui.h>
 #include <imgui_stdlib.h>
 
-MenuBar::MenuBar(MainLayer& mainLayer, ModalManager& modalManager)
+MenuBar::MenuBar(MainLayer& mainLayer)
     : m_MainLayer(mainLayer)
-    , m_ModalManager(modalManager)
+    , m_ModalManager(mainLayer.m_ModalManager)
+    , m_KeybindManager(mainLayer.m_KeybindManager)
 {
     m_ModalManager.RegisterModal("Allocate Memory", BIND_FN(MenuBar::AllocateMemoryModal));
+    m_KeybindManager.RegisterKeybind(
+        "Open Process",
+        "Opens the list of processes to attach to",
+        "Global", ImGuiMod_Ctrl | ImGuiKey_O,
+        [this]() {
+            m_ModalManager.OpenModal("Open Process");
+        });
+    m_KeybindManager.RegisterKeybind("Allocate Memory",
+        "Opens the allocate memory modal",
+        "Global", ImGuiMod_Ctrl | ImGuiMod_Alt | ImGuiKey_M,
+        [this]() {
+            m_ModalManager.OpenModal("Allocate Memory");
+        });
 }
 
 void MenuBar::Draw()
@@ -30,7 +44,7 @@ void MenuBar::Draw()
             ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0, 0));
 
             Fonts::Push(Fonts::Type::FontAwesome6);
-            if (ImGui::RoundedMenuItemEx("Open Process", ICON_FA_WINDOW_MAXIMIZE, "Ctrl+O")) {
+            if (ImGui::RoundedMenuItemEx("Open Process", ICON_FA_WINDOW_MAXIMIZE, m_KeybindManager.GetKeybindString("Open Process").c_str())) {
                 m_ModalManager.OpenModal("Open Process");
             }
             Fonts::Pop();
@@ -53,7 +67,7 @@ void MenuBar::Draw()
         }
 
         if (ImGui::BeginMenu("Tools")) {
-            if (ImGui::RoundedMenuItemEx("Allocate Memory", ICON_MDI_PLUS_BOX, "Ctrl+Alt+M")) {
+            if (ImGui::RoundedMenuItemEx("Allocate Memory", ICON_MDI_PLUS_BOX, m_KeybindManager.GetKeybindString("Allocate Memory").c_str())) {
                 m_ModalManager.OpenModal("Allocate Memory");
             }
             ImGui::EndMenu();

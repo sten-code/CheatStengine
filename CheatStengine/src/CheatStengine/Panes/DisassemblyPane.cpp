@@ -40,11 +40,11 @@ DisassemblyPane::DisassemblyPane(State& state, ModalManager& modalManager, Keybi
 void DisassemblyPane::HandleKeybinds()
 {
     if (ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows)) {
-        if (m_KeybindManger.IsShortcutPressed("Goto Address")) {
+        if (m_KeybindManger.IsKeybindPressed("Goto Address")) {
             m_AddressInput.clear();
             m_ModalManager.OpenModal("Goto Address");
         }
-        if (m_KeybindManger.IsShortcutPressed("Follow Instruction")) {
+        if (m_KeybindManger.IsKeybindPressed("Follow Instruction")) {
             auto it = m_Instructions.find(m_SelectedAddress);
             if (it != m_Instructions.end()) {
                 const DisassemblyLine& line = it->second;
@@ -54,7 +54,7 @@ void DisassemblyPane::HandleKeybinds()
                 }
             }
         }
-        if (m_KeybindManger.IsShortcutPressed("Assemble")) {
+        if (m_KeybindManger.IsKeybindPressed("Assemble")) {
             auto it = m_Instructions.find(m_SelectedAddress);
             if (it != m_Instructions.end()) {
                 const DisassemblyLine& line = it->second;

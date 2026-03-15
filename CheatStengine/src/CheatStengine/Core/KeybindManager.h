@@ -1,6 +1,7 @@
 #pragma once
 
 #include <imgui.h>
+#include <imgui_internal.h>
 
 #include <functional>
 #include <ranges>
@@ -28,10 +29,12 @@ public:
         ImGuiKeyChord keyChord,
         std::function<void()> callback = nullptr)
     {
+        INFO("Registering keybind: {}, chord: {}, category: {}", name, ImGui::GetKeyChordName(keyChord), category);
         Keybind& keybind = m_Keybinds.emplace(
-            std::piecewise_construct,
-            std::forward_as_tuple(name),
-            std::forward_as_tuple(name, description, category, keyChord, callback)).first->second;
+                                         std::piecewise_construct,
+                                         std::forward_as_tuple(name),
+                                         std::forward_as_tuple(name, description, category, keyChord, callback))
+                               .first->second;
         m_KeybindsByCategory[category].push_back(&keybind);
     }
 
@@ -55,7 +58,7 @@ public:
         return categories;
     }
 
-    [[nodiscard]] const std::vector<Keybind*>& GetShortcutsInCategory(const std::string& category) const
+    [[nodiscard]] const std::vector<Keybind*>& GetKeybindsInCategory(const std::string& category) const
     {
         static std::vector<Keybind*> empty;
         auto it = m_KeybindsByCategory.find(category);
@@ -65,7 +68,7 @@ public:
         return empty;
     }
 
-    [[nodiscard]] bool IsShortcutPressed(const std::string& name) const
+    [[nodiscard]] bool IsKeybindPressed(const std::string& name) const
     {
         auto it = m_Keybinds.find(name);
         if (it != m_Keybinds.end()) {
@@ -74,8 +77,25 @@ public:
         return false;
     }
 
+    [[nodiscard]] std::string GetKeybindString(const std::string& name) const
+    {
+        auto it = m_Keybinds.find(name);
+        if (it != m_Keybinds.end()) {
+            return ImGui::GetKeyChordName(it->second.KeyChord);
+        }
+        return "";
+    }
+
+    [[nodiscard]] ImGuiKeyChord GetKeyChord(const std::string& name) const
+    {
+        auto it = m_Keybinds.find(name);
+        if (it != m_Keybinds.end()) {
+            return it->second.KeyChord;
+        }
+        return ImGuiKeyChord();
+    }
+
 private:
     std::unordered_map<std::string, Keybind> m_Keybinds;
     std::unordered_map<std::string, std::vector<Keybind*>> m_KeybindsByCategory;
-    bool m_ShortcutsEnabled = true;
 };

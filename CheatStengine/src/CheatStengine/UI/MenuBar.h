@@ -2,13 +2,14 @@
 
 #include <CheatStengine/Core/ModalManager.h>
 
+#include <CheatStengine/Core/KeybindManager.h>
 #include <imgui_internal.h>
 
 class MainLayer;
 
 class MenuBar {
 public:
-    explicit MenuBar(MainLayer& mainLayer, ModalManager& modalManager);
+    explicit MenuBar(MainLayer& mainLayer);
 
     void Draw();
 
@@ -21,4 +22,5 @@ private:
 private:
     MainLayer& m_MainLayer;
     ModalManager& m_ModalManager;
+    KeybindManager& m_KeybindManager;
 };

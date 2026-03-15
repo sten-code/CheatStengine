@@ -19,7 +19,7 @@
 MainLayer::MainLayer(Window& window)
     : Layer("MainLayer")
     , m_Window(window)
-    , m_MenuBar(*this, m_ModalManager)
+    , m_MenuBar(*this)
     , m_TitleBar(window, m_State)
 {
     m_State.Process = Process("RobloxPlayerBeta.exe");
@@ -55,6 +55,7 @@ void MainLayer::OnUpdate(float deltaTime)
 
 void MainLayer::OnImGuiRender()
 {
+    m_KeybindManager.Update();
     bool isMaximized = m_Window.IsMaximized();
     ImGui::SetCursorPos(ImVec2 { 40.0f, isMaximized ? 9.0f : 3.0f });
 
