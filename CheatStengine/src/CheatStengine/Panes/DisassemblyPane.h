@@ -1,11 +1,12 @@
 #pragma once
 
 #include <CheatStengine/Assembly/Formatter.h>
-#include <CheatStengine/Panes/Pane.h>
 #include <CheatStengine/Core/ModalManager.h>
+#include <CheatStengine/Panes/Pane.h>
 
 #include <zasm/decoder/decoder.hpp>
 
+#include <CheatStengine/Core/KeybindManager.h>
 #include <map>
 #include <string>
 #include <vector>
@@ -24,7 +25,7 @@ struct DisassemblyLine {
 
 class DisassemblyPane final : public Pane {
 public:
-    explicit DisassemblyPane(State& state, ModalManager& modalManager);
+    explicit DisassemblyPane(State& state, ModalManager& modalManager, KeybindManager& keybindManager);
 
     void HandleKeybinds();
 
@@ -46,6 +47,7 @@ private:
 
 private:
     ModalManager& m_ModalManager;
+    KeybindManager& m_KeybindManger;
 
     zasm::Decoder m_Decoder;
     std::string m_AddressInput;

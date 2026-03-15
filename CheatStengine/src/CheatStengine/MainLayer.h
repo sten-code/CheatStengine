@@ -1,10 +1,10 @@
 #pragma once
 
 #include <CheatStengine/Core/ModalManager.h>
+#include <CheatStengine/Core/KeybindManager.h>
 #include <CheatStengine/Panes/Pane.h>
 #include <CheatStengine/UI/MenuBar.h>
 #include <CheatStengine/UI/TitleBar.h>
-
 #include <Engine/Core/Layers/Layer.h>
 
 class MainLayer final : public Layer {
@@ -35,6 +35,7 @@ private:
 
     State m_State;
     ModalManager m_ModalManager;
+    KeybindManager m_KeybindManager;
     std::vector<std::unique_ptr<Pane>> m_Panes;
 
     MenuBar m_MenuBar;

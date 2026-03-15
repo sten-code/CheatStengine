@@ -16,29 +16,51 @@
 
 #include <format>
 
-DisassemblyPane::DisassemblyPane(State& state, ModalManager& modalManager)
+DisassemblyPane::DisassemblyPane(State& state, ModalManager& modalManager, KeybindManager& keybindManager)
     : Pane(ICON_MDI_HAMMER_WRENCH " Disassembly", state)
     , m_Decoder(zasm::MachineMode::AMD64)
     , m_ModalManager(modalManager)
+    , m_KeybindManger(keybindManager)
 {
     m_ModalManager.RegisterModal("Goto Address", BIND_FN(DisassemblyPane::GotoAddressModal));
     m_ModalManager.RegisterModal("Assemble", BIND_FN(DisassemblyPane::AssembleModal));
+    m_KeybindManger.RegisterKeybind(
+        "Goto Address",
+        "Focuses the instruction at the specified address",
+        "Disassembly", ImGuiKey_G);
+    m_KeybindManger.RegisterKeybind(
+        "Follow Instruction",
+        "Follows the instruction at the selected line if it has an immediate operand that looks like an address",
+        "Disassembly", ImGuiKey_Space);
+    m_KeybindManger.RegisterKeybind("Assemble",
+        "Opens the assemble modal for the currently focused instruction",
+        "Disassembly", ImGuiKey_A);
 }
 
 void DisassemblyPane::HandleKeybinds()
 {
     if (ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows)) {
-        if (ImGui::IsKeyPressed(ImGuiKey_G)) {
+        if (m_KeybindManger.IsShortcutPressed("Goto Address")) {
             m_AddressInput.clear();
             m_ModalManager.OpenModal("Goto Address");
         }
-        if (ImGui::IsKeyPressed(ImGuiKey_Space)) {
+        if (m_KeybindManger.IsShortcutPressed("Follow Instruction")) {
             auto it = m_Instructions.find(m_SelectedAddress);
             if (it != m_Instructions.end()) {
                 const DisassemblyLine& line = it->second;
                 const zasm::InstructionDetail* detail = std::get_if<zasm::InstructionDetail>(&line.Value);
                 if (detail) {
                     JumpToPointedInstruction(detail->getInstruction());
+                }
+            }
+        }
+        if (m_KeybindManger.IsShortcutPressed("Assemble")) {
+            auto it = m_Instructions.find(m_SelectedAddress);
+            if (it != m_Instructions.end()) {
+                const DisassemblyLine& line = it->second;
+                const zasm::InstructionDetail* detail = std::get_if<zasm::InstructionDetail>(&line.Value);
+                if (detail) {
+                    m_ModalManager.OpenModal("Assemble", m_SelectedAddress);
                 }
             }
         }
@@ -272,6 +294,10 @@ void DisassemblyPane::AssembleModal(const std::string& name, const std::any& pay
         if (ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows)
             && ImGui::IsKeyPressed(ImGuiKey_Escape)) {
             ImGui::CloseCurrentPopup();
+        }
+
+        if (ImGui::IsWindowAppearing()) {
+            ImGui::SetKeyboardFocusHere();
         }
 
         static std::string assembly;
