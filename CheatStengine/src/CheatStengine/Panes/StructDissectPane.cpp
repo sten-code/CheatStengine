@@ -418,8 +418,6 @@ void StructDissectPane::DrawField(Field& field, uintptr_t baseAddress, size_t de
     ImGuiListClipper clipper;
     clipper.Begin(static_cast<int>(rowsToRender.size()));
 
-    float top = ImGui::GetCursorPosY();
-
     if (m_SearchResultIndex != -1) {
         int visible_start = clipper.DisplayStart;
         int visible_end = clipper.DisplayEnd;

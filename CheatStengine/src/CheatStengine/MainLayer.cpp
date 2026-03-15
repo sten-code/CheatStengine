@@ -35,6 +35,11 @@ MainLayer::MainLayer(Window& window)
     // if (!result.IsError()) {
     //     structDissectPane.AddDissection("FakeDataModel", result.Value);
     // }
+
+    AddressEvaluator::Result result = AddressEvaluator::Evaluate("robloxplayerbeta.exe+0x82766C8", m_State.Process);
+    if (!result.IsError()) {
+        structDissectPane.AddDissection("RawScheduler", result.Value);
+    }
 }
 
 void MainLayer::OnAttach()
