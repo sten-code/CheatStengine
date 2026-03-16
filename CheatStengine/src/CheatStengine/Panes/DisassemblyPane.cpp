@@ -172,6 +172,7 @@ void DisassemblyPane::Draw()
             std::ostringstream formattedBytes;
             std::string formattedInstruction;
 
+            uintptr_t instructionAddress = currentAddress;
             std::optional<MODULEENTRY32> modEntry = Utils::GetModuleForAddress(currentAddress, m_State.Modules);
             if (!m_Instructions.contains(currentAddress)) {
                 ImGui::TableSetColumnIndex(0);
@@ -211,7 +212,7 @@ void DisassemblyPane::Draw()
                         oss << "db ";
                         for (size_t i = 0; i < line.Bytes.size(); i++) {
                             uint8_t byte = line.Bytes[i];
-                            oss << std::hex << std::setfill('0') << std::setw(2) << std::uppercase << "0x" << (int)byte;
+                            oss << std::hex << std::setfill('0') << std::setw(2) << std::uppercase << "0x" << static_cast<int>(byte);
                             if (i < line.Bytes.size() - 1) {
                                 oss << ", ";
                             }
@@ -234,7 +235,7 @@ void DisassemblyPane::Draw()
                 }
 
                 for (size_t i = 0; i < line.Bytes.size(); i++) {
-                    formattedBytes << std::hex << std::setfill('0') << std::setw(2) << std::uppercase << (int)line.Bytes[i];
+                    formattedBytes << std::hex << std::setfill('0') << std::setw(2) << std::uppercase << static_cast<int>(line.Bytes[i]);
                     if (i < line.Bytes.size() - 1) {
                         formattedBytes << " ";
                     }
@@ -255,16 +256,24 @@ void DisassemblyPane::Draw()
             std::string popupLabel = std::format("##popup_{:X}", address);
             if (ImGui::BeginPopupContextItem(popupLabel.c_str())) {
                 m_SelectedAddress = address;
-                if (ImGui::RoundedMenuItem("Copy Address")) {
-                    ImGui::SetClipboardText(std::format("0x{:012X}", address).c_str());
+                if (ImGui::BeginRoundedMenu("Copy")) {
+                    if (ImGui::RoundedMenuItem("Address")) {
+                        ImGui::SetClipboardText(std::format("0x{:012X}", address).c_str());
+                    }
+                    if (ImGui::RoundedMenuItem("Bytes")) {
+                        ImGui::SetClipboardText(formattedBytes.str().c_str());
+                    }
+                    if (ImGui::RoundedMenuItem("Instruction")) {
+                        ImGui::SetClipboardText(formattedInstruction.c_str());
+                    }
+                    if (modEntry) {
+                        if (ImGui::RoundedMenuItem("RVA")) {
+                            ImGui::SetClipboardText(std::format("0x{:X}", instructionAddress - reinterpret_cast<uintptr_t>(modEntry->modBaseAddr)).c_str());
+                        }
+                    }
+                    ImGui::EndMenu();
                 }
-                if (ImGui::RoundedMenuItem("Copy Bytes")) {
-                    ImGui::SetClipboardText(formattedBytes.str().c_str());
-                }
-                if (ImGui::RoundedMenuItem("Copy Instruction")) {
-                    ImGui::SetClipboardText(formattedInstruction.c_str());
-                }
-                if (ImGui::RoundedMenuItem("Assemble")) {
+                if (ImGui::RoundedMenuItem("Assemble", m_KeybindManger.GetKeybindString("Assemble").c_str())) {
                     m_ModalManager.OpenModal("Assemble");
                 }
                 ImGui::EndPopup();

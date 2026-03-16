@@ -79,6 +79,10 @@ void MainLayer::OnImGuiRenderDock()
 
     for (const std::unique_ptr<Pane>& pane : m_Panes) {
         if (pane->IsOpen()) {
+            if (pane->IsForcedFocus()) {
+                ImGui::SetNextWindowFocus();
+                pane->UnforceFocus();
+            }
             pane->Draw();
         }
     }

@@ -4,14 +4,24 @@
 #include <CheatStengine/Icons/FontAwesome6.h>
 #include <CheatStengine/Icons/MaterialDesignIcons.h>
 #include <CheatStengine/MainLayer.h>
+#include <CheatStengine/Panes/DisassemblyPane.h>
 #include <CheatStengine/UI/ImGui/Fonts.h>
 #include <CheatStengine/UI/ImGui/Menu.h>
 #include <CheatStengine/UI/TitleBar.h>
 #include <Engine/Core/Application.h>
 
-#include <CheatStengine/Panes/DisassemblyPane.h>
 #include <imgui.h>
 #include <imgui_stdlib.h>
+
+static ImRect RectOffset(const ImRect& rect, float x, float y)
+{
+    ImRect result = rect;
+    result.Min.x += x;
+    result.Min.y += y;
+    result.Max.x += x;
+    result.Max.y += y;
+    return result;
+}
 
 MenuBar::MenuBar(MainLayer& mainLayer)
     : m_MainLayer(mainLayer)
@@ -75,16 +85,6 @@ void MenuBar::Draw()
     }
     EndMenubar();
     ImGui::EndGroup();
-}
-
-static ImRect RectOffset(const ImRect& rect, float x, float y)
-{
-    ImRect result = rect;
-    result.Min.x += x;
-    result.Min.y += y;
-    result.Max.x += x;
-    result.Max.y += y;
-    return result;
 }
 
 bool MenuBar::BeginMenubar(const ImRect& barRectangle)
@@ -162,6 +162,7 @@ void MenuBar::EndMenubar()
 void MenuBar::AllocateMemoryModal(const std::string& name, const std::any& payload) const
 {
     static std::string sizeInput;
+    bool allocate = false;
 
     ImGui::SetNextWindowPos(ImGui::GetMainViewport()->GetCenter(), ImGuiCond_Appearing, ImVec2 { 0.5f, 0.5f });
     if (ImGui::BeginPopupModal(name.c_str(), nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
@@ -176,7 +177,6 @@ void MenuBar::AllocateMemoryModal(const std::string& name, const std::any& paylo
             ImGui::SetKeyboardFocusHere();
         }
 
-        bool allocate = false;
         if (ImGui::InputText("Size", &sizeInput, ImGuiInputTextFlags_EnterReturnsTrue)) {
             allocate = true;
             ImGui::CloseCurrentPopup();
@@ -192,13 +192,20 @@ void MenuBar::AllocateMemoryModal(const std::string& name, const std::any& paylo
         }
 
         ImGui::EndPopup();
-        if (allocate) {
-            try {
-                size_t size = std::stoull(sizeInput);
-                uintptr_t address = m_MainLayer.m_State.Process.Allocate(size, PAGE_READWRITE);
-                m_MainLayer.GetPane<DisassemblyPane>()->FocusAddress(address);
-            } catch (const std::exception&) {
+    }
+
+    if (allocate) {
+        try {
+            size_t size = std::stoull(sizeInput);
+            uintptr_t address = m_MainLayer.m_State.Process.Allocate(size, PAGE_READWRITE);
+            if (address == 0) {
+                ERR("Failed to allocate memory");
+                return;
             }
+            DisassemblyPane* pane = m_MainLayer.GetPane<DisassemblyPane>();
+            pane->FocusAddress(address);
+            pane->ForceFocus();
+        } catch (const std::exception&) {
         }
     }
 }

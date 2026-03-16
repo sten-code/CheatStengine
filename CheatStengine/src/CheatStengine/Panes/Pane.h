@@ -18,6 +18,9 @@ public:
     void Open() { m_Open = true; }
     void Close() { m_Open = false; }
     void SetOpen(bool open) { m_Open = open; }
+    void ForceFocus() { m_ForceFocus = true; }
+    [[nodiscard]] bool IsForcedFocus() const { return m_ForceFocus; }
+    void UnforceFocus() { m_ForceFocus = false; }
 
     [[nodiscard]] bool IsOpen() const { return m_Open; }
     [[nodiscard]] const std::string& GetName() const { return m_Name; }
@@ -27,4 +30,5 @@ protected:
 
     std::string m_Name;
     bool m_Open = true;
+    bool m_ForceFocus = false;
 };

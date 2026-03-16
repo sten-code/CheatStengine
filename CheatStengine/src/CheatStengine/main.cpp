@@ -125,44 +125,6 @@ public:
 
 Application* CreateApplication()
 {
-    // zasm::Program program(zasm::MachineMode::AMD64);
-    // zasm::Decoder decoder(program.getMode());
-    //
-    // std::vector<uint8_t> code {
-    //     // 0xFF, 0x25, 0x00, 0x00, 0x00, 0x00, 0xD0, 0xF1, 0xB3, 0x5F, 0xFD, 0x7F, 0x00, 0x00,
-    //     0x48, 0x8B, 0x05, 0xF9, 0xFF, 0xFF, 0xFF, 0xCC, 0xCC, 0xCC, 0xCC, 0xCC, 0xCC, 0xCC, 0xCC
-    //
-    // };
-    //
-    // size_t bytesDecoded = 0;
-    // while (bytesDecoded < code.size()) {
-    //     uintptr_t curAddress = bytesDecoded;
-    //     zasm::Decoder::Result res = decoder.decode(code.data() + bytesDecoded, code.size() - bytesDecoded, curAddress);
-    //     if (!res) {
-    //         ERR("Decoding error at address 0x{:X}: {}", curAddress, res.error().getErrorMessage());
-    //         break;
-    //     }
-    //
-    //     zasm::InstructionDetail& instrDetail = res.value();
-    //     zasm::Instruction instr = instrDetail.getInstruction();
-    //
-    //     zasm::Mem* mem0 = instr.getOperand(0).getIf<zasm::Mem>();
-    //     zasm::Mem* mem1 = instr.getOperand(1).getIf<zasm::Mem>();
-    //     if (mem0 && static_cast<ZydisRegister>(mem0->getBase().getId()) == ZYDIS_REGISTER_RIP && mem0->getDisplacement() == instrDetail.getLength()) {
-    //         uint64_t targetAddr = *reinterpret_cast<uint64_t*>(code.data() + bytesDecoded + instrDetail.getLength());
-    //         instr.setOperand(0, zasm::Imm { targetAddr });
-    //         bytesDecoded += 8;
-    //     } else if (mem1 && static_cast<ZydisRegister>(mem1->getBase().getId()) == ZYDIS_REGISTER_RIP && mem1->getDisplacement() == instrDetail.getLength()) {
-    //         uint64_t targetAddr = *reinterpret_cast<uint64_t*>(code.data() + bytesDecoded + instrDetail.getLength());
-    //         instr.setOperand(1, zasm::Imm { targetAddr });
-    //         bytesDecoded += 8;
-    //     }
-    //     FormattedInstruction fmt = Formatter::Format(instr);
-    //     INFO("0x{:X}: {}", curAddress, fmt.Text);
-    //     // INFO("0x{:X}: {}", curAddress, zasm::formatter::toString(&instr));
-    //
-    //     bytesDecoded += instrDetail.getLength();
-    // }
 
     return new CheatStengine();
 }
@@ -170,6 +132,44 @@ Application* CreateApplication()
 // int main(int argc, char* argv[])
 // {
 //     Logger::Init();
+// zasm::Program program(zasm::MachineMode::AMD64);
+// zasm::Decoder decoder(program.getMode());
+//
+// std::vector<uint8_t> code {
+//     // 0xFF, 0x25, 0x00, 0x00, 0x00, 0x00, 0xD0, 0xF1, 0xB3, 0x5F, 0xFD, 0x7F, 0x00, 0x00,
+//     0x48, 0x8B, 0x05, 0xF9, 0xFF, 0xFF, 0xFF, 0xCC, 0xCC, 0xCC, 0xCC, 0xCC, 0xCC, 0xCC, 0xCC
+//
+// };
+//
+// size_t bytesDecoded = 0;
+// while (bytesDecoded < code.size()) {
+//     uintptr_t curAddress = bytesDecoded;
+//     zasm::Decoder::Result res = decoder.decode(code.data() + bytesDecoded, code.size() - bytesDecoded, curAddress);
+//     if (!res) {
+//         ERR("Decoding error at address 0x{:X}: {}", curAddress, res.error().getErrorMessage());
+//         break;
+//     }
+//
+//     zasm::InstructionDetail& instrDetail = res.value();
+//     zasm::Instruction instr = instrDetail.getInstruction();
+//
+//     zasm::Mem* mem0 = instr.getOperand(0).getIf<zasm::Mem>();
+//     zasm::Mem* mem1 = instr.getOperand(1).getIf<zasm::Mem>();
+//     if (mem0 && static_cast<ZydisRegister>(mem0->getBase().getId()) == ZYDIS_REGISTER_RIP && mem0->getDisplacement() == instrDetail.getLength()) {
+//         uint64_t targetAddr = *reinterpret_cast<uint64_t*>(code.data() + bytesDecoded + instrDetail.getLength());
+//         instr.setOperand(0, zasm::Imm { targetAddr });
+//         bytesDecoded += 8;
+//     } else if (mem1 && static_cast<ZydisRegister>(mem1->getBase().getId()) == ZYDIS_REGISTER_RIP && mem1->getDisplacement() == instrDetail.getLength()) {
+//         uint64_t targetAddr = *reinterpret_cast<uint64_t*>(code.data() + bytesDecoded + instrDetail.getLength());
+//         instr.setOperand(1, zasm::Imm { targetAddr });
+//         bytesDecoded += 8;
+//     }
+//     FormattedInstruction fmt = Formatter::Format(instr);
+//     INFO("0x{:X}: {}", curAddress, fmt.Text);
+//     // INFO("0x{:X}: {}", curAddress, zasm::formatter::toString(&instr));
+//
+//     bytesDecoded += instrDetail.getLength();
+// }
 //
 //     // Assembly::Assembler assembler;
 //     // assembler.Assemble("mov rax, cs:[rbx + rcx*2 + 16]");
