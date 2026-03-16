@@ -3,7 +3,8 @@ project(CheatStengine)
 include(vendor/zasm.cmake)
 
 file(GLOB_RECURSE SOURCE_FILES src/*.cpp)
-add_executable(${PROJECT_NAME} ${SOURCE_FILES})
+add_executable(${PROJECT_NAME} ${SOURCE_FILES}
+        src/CheatStengine/Tools/PatternScanner.h)
 
 if (WIN32)
     add_definitions(-DNOMINMAX)

@@ -9,4 +9,7 @@ public:
     void Draw() override;
 
 private:
+    void DrawPatternScanResults(PatternScanResult& result);
+
+private:
 };
