@@ -197,7 +197,7 @@ void PatternScannerPane::ScanPatternModal(const std::string& name, const std::an
             ImGui::BeginDisabled();
         }
 
-        if (ImGui::Button("Ok", ImVec2 { 70.0f, 0 })) {
+        if (ImGui::Button("OK", ImVec2 { 70.0f, 0 })) {
             PerformPatternScan(pattern, m_State.Modules[selectedModuleIndex]);
             ForceFocus();
             ImGui::CloseCurrentPopup();
