@@ -1,5 +1,6 @@
 #pragma once
 
+#include <CheatStengine/Core/KeybindManager.h>
 #include <CheatStengine/Core/ModalManager.h>
 #include <CheatStengine/Panes/Pane.h>
 #include <CheatStengine/Tools/StructDissect.h>
@@ -8,7 +9,7 @@
 
 class StructDissectPane final : public Pane {
 public:
-    explicit StructDissectPane(State& state, ModalManager& modalManager);
+    explicit StructDissectPane(State& state, ModalManager& modalManager, KeybindManager& keybindManager);
 
     void Draw() override;
 
@@ -31,13 +32,14 @@ private:
         const std::string& label, Field& field,
         uintptr_t address, const FieldValue& value) const;
 
-    void AddDissectionModal(const std::string& name, const std::any& rawPayload) const;
+    void AddDissectionModal(const std::string& name, const std::any& rawPayload);
     void AddElementModal(const std::string& name, const std::any& rawPayload);
     void EditValueModal(const std::string& name, const std::any& rawPayload) const;
     void ChangeSizeModal(const std::string& name, const std::any& rawPayload) const;
 
 private:
     ModalManager& m_ModalManager;
+    KeybindManager& m_KeybindManager;
     bool m_FindPopupOpened = false;
     bool m_FocusOnFind = false;
     bool m_FocusOnSearchResult = false;

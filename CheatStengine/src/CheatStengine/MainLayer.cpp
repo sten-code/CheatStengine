@@ -31,7 +31,7 @@ MainLayer::MainLayer(Window& window)
     AddPane<MemoryScannerPane>(m_State);
     AddPane<DisassemblyPane>(m_State, m_ModalManager, m_KeybindManager);
     AddPane<PatternScannerPane>(m_State, *this);
-    StructDissectPane& structDissectPane = AddPane<StructDissectPane>(m_State, m_ModalManager);
+    StructDissectPane& structDissectPane = AddPane<StructDissectPane>(m_State, m_ModalManager, m_KeybindManager);
 
     // AddressEvaluator::Result result = AddressEvaluator::Evaluate("robloxplayerbeta.exe+0x7D02728", m_State.Process);
     // if (!result.IsError()) {

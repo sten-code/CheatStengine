@@ -71,14 +71,18 @@ static bool IsExpandableType(FieldType type)
     return type == FieldType::Dissection || type == FieldType::Pointer || type == FieldType::StartEndPointer;
 }
 
-StructDissectPane::StructDissectPane(State& state, ModalManager& modalManager)
+StructDissectPane::StructDissectPane(State& state, ModalManager& modalManager, KeybindManager& keybindManager)
     : Pane(ICON_MDI_CONTENT_CUT " Struct Dissect", state)
     , m_ModalManager(modalManager)
+    , m_KeybindManager(keybindManager)
 {
     m_ModalManager.RegisterModal("Add Dissection", BIND_FN(StructDissectPane::AddDissectionModal));
     m_ModalManager.RegisterModal("Add Element", BIND_FN(StructDissectPane::AddElementModal));
     m_ModalManager.RegisterModal("Edit Value", BIND_FN(StructDissectPane::EditValueModal));
     m_ModalManager.RegisterModal("Change Size", BIND_FN(StructDissectPane::ChangeSizeModal));
+    m_KeybindManager.RegisterKeybind("Add Dissection", "Adds a new dissection for a given address", "Struct Dissect", ImGuiKey_D | ImGuiMod_Ctrl, [this]() {
+        m_ModalManager.OpenModal("Add Dissection");
+    });
 }
 
 std::string StructDissectPane::FormatFieldValue(const FieldValue& fieldValue, const Field& field)
@@ -697,7 +701,7 @@ bool StructDissectPane::FieldContextMenu(
     return shouldDelete;
 }
 
-void StructDissectPane::AddDissectionModal(const std::string& name, const std::any& rawPayload) const
+void StructDissectPane::AddDissectionModal(const std::string& name, const std::any& rawPayload)
 {
     if (ImGui::BeginPopupModal(name.c_str(), nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
         if (ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows)
@@ -724,6 +728,7 @@ void StructDissectPane::AddDissectionModal(const std::string& name, const std::a
             if (!result.IsError()) {
                 uintptr_t address = result.Value;
                 AddDissection(dissectionName, address);
+                ForceFocus();
 
                 dissectionName = "unnamed";
                 addressInput.clear();

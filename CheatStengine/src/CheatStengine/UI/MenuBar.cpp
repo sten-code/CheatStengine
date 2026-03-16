@@ -83,6 +83,9 @@ void MenuBar::Draw()
             if (ImGui::RoundedMenuItemEx("Scan Pattern", ICON_MDI_REGEX, m_KeybindManager.GetKeybindString("Scan Pattern").c_str())) {
                 m_ModalManager.OpenModal("Scan Pattern");
             }
+            if (ImGui::RoundedMenuItemEx("Dissect Struct", ICON_MDI_CONTENT_CUT, m_KeybindManager.GetKeybindString("Add Dissection").c_str())) {
+                m_ModalManager.OpenModal("Add Dissection");
+            }
             ImGui::EndMenu();
         }
     }

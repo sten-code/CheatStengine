@@ -31,6 +31,10 @@ void PatternScannerPane::Draw()
 {
     ImGui::Begin(m_Name.c_str(), &m_Open);
 
+    if (ImGui::Button("New", ImVec2 { 70.0f, 0 })) {
+        m_ModalManager.OpenModal("Scan Pattern");
+    }
+
     if (ImGui::BeginTabBar("DissectionsTabBar")) {
         for (size_t i = 0; i < m_State.PatternScanResults.size(); i++) {
             PatternScan& result = m_State.PatternScanResults[i];
