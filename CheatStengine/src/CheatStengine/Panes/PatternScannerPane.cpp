@@ -20,7 +20,6 @@ PatternScannerPane::PatternScannerPane(State& state, ModalManager& modalManager,
         "Pattern Scanner", ImGuiKey_B | ImGuiMod_Alt, [this]() {
             m_ModalManager.OpenModal("Scan Pattern");
         });
-    m_State.PatternScanResults.push_back({ "FF FF FF", { 0x0 } });
 }
 
 void PatternScannerPane::Draw()
