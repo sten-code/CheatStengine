@@ -18,7 +18,11 @@ public:
     void Open() { m_Open = true; }
     void Close() { m_Open = false; }
     void SetOpen(bool open) { m_Open = open; }
-    void ForceFocus() { m_ForceFocus = true; }
+    void ForceFocus()
+    {
+        m_ForceFocus = true;
+        m_Open = true;
+    }
     [[nodiscard]] bool IsForcedFocus() const { return m_ForceFocus; }
     void UnforceFocus() { m_ForceFocus = false; }
 
