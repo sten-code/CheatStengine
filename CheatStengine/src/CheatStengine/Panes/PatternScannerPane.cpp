@@ -4,6 +4,7 @@
 #include <CheatStengine/Icons/MaterialDesignIcons.h>
 #include <CheatStengine/Utils.h>
 
+#include <CheatStengine/Assembly/Formatter.h>
 #include <imgui.h>
 #include <imgui_stdlib.h>
 
@@ -28,7 +29,7 @@ void PatternScannerPane::Draw()
 
     if (ImGui::BeginTabBar("DissectionsTabBar")) {
         for (size_t i = 0; i < m_State.PatternScanResults.size(); i++) {
-            PatternScanResult& result = m_State.PatternScanResults[i];
+            PatternScan& result = m_State.PatternScanResults[i];
             bool open = true;
             if (ImGui::BeginTabItem(result.Pattern.c_str(), &open)) {
                 DrawPatternScanResults(result);
@@ -45,7 +46,48 @@ void PatternScannerPane::Draw()
     ImGui::End();
 }
 
-void PatternScannerPane::DrawPatternScanResults(PatternScanResult& result)
+void PatternScannerPane::PerformPatternScan(std::string_view pattern, const MODULEENTRY32& moduleEntry) const
+{
+    INFO("Performing pattern scan for pattern '{}' in module '{}'", pattern, moduleEntry.szModule);
+    std::vector<uintptr_t> results = m_PatternScanner.PatternScan(
+        pattern,
+        reinterpret_cast<uintptr_t>(moduleEntry.modBaseAddr),
+        reinterpret_cast<uintptr_t>(moduleEntry.modBaseAddr) + moduleEntry.modBaseSize);
+    std::vector<PatternScan::Result> formattedResults;
+    formattedResults.reserve(results.size());
+    zasm::Decoder decoder(zasm::MachineMode::AMD64);
+    for (uintptr_t address : results) {
+        INFO("Decoding instruction at 0x{:X}", address);
+        std::vector<uint8_t> code = m_State.Process.ReadBuffer(address, 16);
+        zasm::Decoder::Result result = decoder.decode(code.data(), code.size(), address);
+        if (result.hasValue()) {
+            FormattedInstruction formatted = Formatter::Format(result->getInstruction(), Formatter::Options { .ImmediateFormatter = [this](uint64_t val) {
+                std::optional<MODULEENTRY32> modEntry = Utils::GetModuleForAddress(val, m_State.Modules);
+                if (modEntry) {
+                    return std::format("{}+0x{:X}", modEntry->szModule, val - reinterpret_cast<uintptr_t>(modEntry->modBaseAddr));
+                }
+
+                return std::format("0x{:X}", val);
+            } });
+
+            formattedResults.push_back({ address, formatted.Text });
+        } else {
+            std::ostringstream oss;
+            oss << "db ";
+            for (size_t i = 0; i < code.size(); i++) {
+                uint8_t byte = code[i];
+                oss << std::hex << std::setfill('0') << std::setw(2) << std::uppercase << "0x" << static_cast<int>(byte);
+                if (i < code.size() - 1) {
+                    oss << ", ";
+                }
+            }
+            formattedResults.push_back({ address, oss.str() });
+        }
+    }
+    m_State.PatternScanResults.emplace_back(std::string(pattern), formattedResults);
+}
+
+void PatternScannerPane::DrawPatternScanResults(PatternScan& patternScan)
 {
     ImGui::PushStyleVar(ImGuiStyleVar_CellPadding, ImVec2 { 3, 2 });
     if (ImGui::BeginTable("PatternScannerResults", 2, ImGuiTableFlags_Resizable | ImGuiTableFlags_BordersV | ImGuiTableFlags_BordersOuterH | ImGuiTableFlags_ScrollY)) {
@@ -55,31 +97,36 @@ void PatternScannerPane::DrawPatternScanResults(PatternScanResult& result)
         ImGui::TableHeadersRow();
 
         ImGuiListClipper clipper;
-        clipper.Begin(result.Results.size());
+        clipper.Begin(patternScan.Results.size());
         while (clipper.Step()) {
             for (size_t i = clipper.DisplayStart; i < clipper.DisplayEnd; i++) {
-                uintptr_t address = result.Results[i];
-                bool isSelected = (result.SelectedIndex == i);
+                PatternScan::Result& result = patternScan.Results[i];
+                bool isSelected = (patternScan.SelectedIndex == i);
                 ImGui::TableNextRow();
 
                 // Address
                 ImGui::TableSetColumnIndex(0);
                 ImGui::SetCursorPosX(ImGui::GetCursorPosX() + 4);
                 ImGui::SetCursorPosY(ImGui::GetCursorPosY() + (ImGui::GetTextLineHeightWithSpacing() / 2 - ImGui::GetTextLineHeight() / 2));
-                std::optional<MODULEENTRY32> modEntry = Utils::GetModuleForAddress(address, m_State.Modules);
+                std::optional<MODULEENTRY32> modEntry = Utils::GetModuleForAddress(result.Address, m_State.Modules);
                 if (modEntry) {
-                    ImGui::Text("%s+0x%llX", modEntry->szModule, address - reinterpret_cast<uintptr_t>(modEntry->modBaseAddr));
+                    ImGui::Text("%s+0x%llX", modEntry->szModule, result.Address - reinterpret_cast<uintptr_t>(modEntry->modBaseAddr));
                 } else {
-                    ImGui::Text("0x%llX", address);
+                    ImGui::Text("0x%llX", result.Address);
                 }
+
+                // Instruction
+                ImGui::TableSetColumnIndex(1);
+                ImGui::SetCursorPosY(ImGui::GetCursorPosY() + (ImGui::GetTextLineHeightWithSpacing() / 2 - ImGui::GetTextLineHeight() / 2));
+                ImGui::Text("%s", result.Instruction.c_str());
 
                 ImGui::SameLine();
 
                 ImGui::TableSetColumnIndex(0);
-                std::string selectableLabel = std::format("##pattern_scan_span_{}_{:X}", i, address);
+                std::string selectableLabel = std::format("##pattern_scan_span_{}_{:X}", i, result.Address);
                 if (ImGui::Selectable(selectableLabel.c_str(), isSelected,
                         ImGuiSelectableFlags_SpanAllColumns | ImGuiSelectableFlags_AllowOverlap)) {
-                    result.SelectedIndex = i;
+                    patternScan.SelectedIndex = i;
                 }
             }
         }
@@ -113,17 +160,21 @@ void PatternScannerPane::ScanPatternModal(const std::string& name, const std::an
         }
 
         static int selectedModuleIndex = 0;
-        if (!moduleItems.empty()) {
+        bool hasModules = !moduleItems.empty();
+        if (hasModules) {
             ImGui::Combo("Module", &selectedModuleIndex, moduleItems.data(), static_cast<int>(moduleItems.size()));
         } else {
             ImGui::TextDisabled("No modules loaded");
+            ImGui::BeginDisabled();
         }
 
         if (ImGui::Button("Ok", ImVec2 { 70.0f, 0 })) {
-            std::vector<uintptr_t> results = m_PatternScanner.PatternScan(pattern, moduleItems[selectedModuleIndex]);
-            m_State.PatternScanResults.push_back({ pattern, results });
+            PerformPatternScan(pattern, m_State.Modules[selectedModuleIndex]);
             ForceFocus();
             ImGui::CloseCurrentPopup();
+        }
+        if (!hasModules) {
+            ImGui::EndDisabled();
         }
         ImGui::SameLine();
         if (ImGui::Button("Cancel", ImVec2 { 70.0f, 0 })) {

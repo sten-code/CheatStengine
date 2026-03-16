@@ -9,12 +9,12 @@
 
 #include <vector>
 
-struct PatternScanResult;
+struct PatternScan;
 
 struct State {
     std::vector<MODULEENTRY32> Modules;
     Process Process;
     std::vector<MemoryAddress> WatchAddresses;
     std::vector<Dissection> Dissections;
-    std::vector<PatternScanResult> PatternScanResults;
+    std::vector<PatternScan> PatternScanResults;
 };

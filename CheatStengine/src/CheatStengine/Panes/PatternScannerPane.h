@@ -6,9 +6,13 @@
 #include <CheatStengine/Core/ModalManager.h>
 #include <CheatStengine/Panes/Pane.h>
 
-struct PatternScanResult {
+struct PatternScan {
+    struct Result {
+        uintptr_t Address;
+        std::string Instruction;
+    };
     std::string Pattern;
-    std::vector<uintptr_t> Results;
+    std::vector<Result> Results;
     size_t SelectedIndex = 0;
 };
 
@@ -18,8 +22,10 @@ public:
 
     void Draw() override;
 
+    void PerformPatternScan(std::string_view pattern, const MODULEENTRY32& moduleEntry) const;
+
 private:
-    void DrawPatternScanResults(PatternScanResult& result);
+    void DrawPatternScanResults(PatternScan& patternScan);
 
     void ScanPatternModal(const std::string& name, const std::any& payload);
 
