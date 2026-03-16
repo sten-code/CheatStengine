@@ -1,6 +1,7 @@
 project(CheatStengine)
 
 include(vendor/zasm.cmake)
+include(vendor/icon_font_cpp_headers.cmake)
 #include(vendor/imgui_hex_editor.cmake)
 
 file(GLOB_RECURSE SOURCE_FILES src/*.cpp)
@@ -11,7 +12,10 @@ if (WIN32)
     add_definitions(-DNOMINMAX)
 endif ()
 
-target_include_directories(${PROJECT_NAME} PUBLIC src)
+target_include_directories(${PROJECT_NAME} PUBLIC
+        src
+        ${ICON_FONT_CPP_HEADERS}
+)
 target_link_libraries(${PROJECT_NAME} PUBLIC
         Engine
         zasm

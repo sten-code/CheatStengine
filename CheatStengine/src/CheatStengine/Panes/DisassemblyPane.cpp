@@ -2,13 +2,13 @@
 
 #include <CheatStengine/AddressEvaluator/Evaluator.h>
 #include <CheatStengine/Assembly/Assembler.h>
-#include <CheatStengine/Icons/MaterialDesignIcons.h>
 #include <CheatStengine/MainLayer.h>
 #include <CheatStengine/UI/ImGui/Fonts.h>
 #include <CheatStengine/UI/ImGui/Menu.h>
 #include <CheatStengine/Utils.h>
 #include <Engine/Core/Application.h>
 
+#include <IconsMaterialDesignIcons.h>
 #include <imgui.h>
 #include <imgui_stdlib.h>
 #include <zasm/formatter/formatter.hpp>

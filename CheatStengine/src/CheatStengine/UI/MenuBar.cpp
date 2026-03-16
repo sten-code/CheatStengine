@@ -1,8 +1,6 @@
 #define IMGUI_DEFINE_MATH_OPERATORS
 #include "MenuBar.h"
 
-#include <CheatStengine/Icons/FontAwesome6.h>
-#include <CheatStengine/Icons/MaterialDesignIcons.h>
 #include <CheatStengine/MainLayer.h>
 #include <CheatStengine/Panes/DisassemblyPane.h>
 #include <CheatStengine/UI/ImGui/Fonts.h>
@@ -10,6 +8,8 @@
 #include <CheatStengine/UI/TitleBar.h>
 #include <Engine/Core/Application.h>
 
+#include <IconsFontAwesome6.h>
+#include <IconsMaterialDesignIcons.h>
 #include <imgui.h>
 #include <imgui_stdlib.h>
 

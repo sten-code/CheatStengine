@@ -1,5 +1,7 @@
 #include "MainLayer.h"
 
+#include <CheatStengine/AddressEvaluator/Error.h>
+#include <CheatStengine/AddressEvaluator/Evaluator.h>
 #include <CheatStengine/Panes/DisassemblyPane.h>
 #include <CheatStengine/Panes/MemoryScannerPane.h>
 #include <CheatStengine/Panes/ModulesPane.h>
@@ -8,10 +10,7 @@
 #include <CheatStengine/Panes/WatchPane.h>
 #include <Engine/Core/Application.h>
 
-#include "AddressEvaluator/Error.h"
-#include "AddressEvaluator/Evaluator.h"
-#include "Icons/MaterialDesignIcons.h"
-
+#include <IconsMaterialDesignIcons.h>
 #include <imgui.h>
 #include <imgui_stdlib.h>
 

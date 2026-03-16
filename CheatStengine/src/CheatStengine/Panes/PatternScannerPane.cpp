@@ -1,13 +1,12 @@
 #include "PatternScannerPane.h"
 
-#include "DisassemblyPane.h"
-
+#include <CheatStengine/Assembly/Formatter.h>
 #include <CheatStengine/Core/ModalManager.h>
-#include <CheatStengine/Icons/MaterialDesignIcons.h>
+#include <CheatStengine/Panes/DisassemblyPane.h>
+#include <CheatStengine/UI/ImGui/Menu.h>
 #include <CheatStengine/Utils.h>
 
-#include <CheatStengine/Assembly/Formatter.h>
-#include <CheatStengine/UI/ImGui/Menu.h>
+#include <IconsMaterialDesignIcons.h>
 #include <imgui.h>
 #include <imgui_stdlib.h>
 

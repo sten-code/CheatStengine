@@ -1,12 +1,12 @@
 #include "WatchPane.h"
 
 #include <CheatStengine/AddressEvaluator/Evaluator.h>
-#include <CheatStengine/Icons/MaterialDesignIcons.h>
 #include <CheatStengine/MainLayer.h>
 #include <CheatStengine/UI/ImGui/EditableLabel.h>
+#include <CheatStengine/UI/ImGui/Menu.h>
 #include <CheatStengine/Utils.h>
 
-#include <CheatStengine/UI/ImGui/Menu.h>
+#include <IconsMaterialDesignIcons.h>
 #include <imgui.h>
 #include <imgui_stdlib.h>
 

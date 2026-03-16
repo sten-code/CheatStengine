@@ -1,8 +1,9 @@
 #include "Fonts.h"
 
-#include <CheatStengine/Icons/Codicons.h>
-#include <CheatStengine/Icons/FontAwesome6.h>
-#include <CheatStengine/Icons/MaterialDesignIcons.h>
+#include <IconsCodicons.h>
+#include <IconsFontAwesome6.h>
+#include <IconsMaterialDesignIcons.h>
+
 #include <Engine/Core/Log.h>
 
 ImFont* Fonts::s_FontAwesome6 = nullptr;
@@ -24,7 +25,7 @@ void Fonts::LoadFonts()
         15.0f, &cfg);
     cfg.MergeMode = true;
     io.Fonts->AddFontFromFileTTF(
-        "Resources/Fonts/" FONT_ICON_FILE_NAME_FAL,
+        "Resources/Fonts/Font Awesome 6 Pro-Light-300.otf",
         13.0f, &cfg);
 
     // Codicon

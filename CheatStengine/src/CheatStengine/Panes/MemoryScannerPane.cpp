@@ -1,12 +1,12 @@
 #include "MemoryScannerPane.h"
 
-#include <CheatStengine/Icons/FontAwesome6.h>
-#include <CheatStengine/Icons/MaterialDesignIcons.h>
 #include <CheatStengine/MainLayer.h>
 #include <CheatStengine/UI/ImGui/Fonts.h>
 #include <CheatStengine/Utils.h>
 #include <Engine/Core/Log.h>
 
+#include <IconsFontAwesome6.h>
+#include <IconsMaterialDesignIcons.h>
 #include <imgui.h>
 #include <imgui_stdlib.h>
 

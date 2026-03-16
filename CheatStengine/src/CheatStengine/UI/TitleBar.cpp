@@ -1,10 +1,9 @@
 #include "TitleBar.h"
-// #include "UI/Fonts.hpp"
-#include "ImGui/Fonts.h"
 
-#include <CheatStengine/Icons/Codicons.h>
+#include <CheatStengine/UI/ImGui/Fonts.h>
 #include <Engine/Core/Application.h>
 
+#include <IconsCodicons.h>
 #include <imgui.h>
 
 bool TitleBar::Draw()

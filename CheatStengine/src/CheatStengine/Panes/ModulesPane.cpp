@@ -1,9 +1,9 @@
 #include "ModulesPane.h"
 #include <CheatStengine/MainLayer.h>
 
+#include <IconsMaterialDesignIcons.h>
 #include <imgui.h>
 
-#include <CheatStengine/Icons/MaterialDesignIcons.h>
 #include <CheatStengine/UI/ImGui/Menu.h>
 #include <algorithm>
 #include <format>

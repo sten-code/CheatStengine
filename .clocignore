@@ -1,4 +1,6 @@
 CheatStengine/src/CheatStengine/Icons/
+CheatStengine/vendor/
+Engine/vendor/
 cmake-build-debug/
 cmake-build-debug-msvc/
 cmake-build-release/

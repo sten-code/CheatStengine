@@ -1,13 +1,13 @@
 #include "Assembly/Formatter.h"
 
 #include <CheatStengine/Assembly/Assembler.h>
-#include <CheatStengine/Icons/FontAwesome6.h>
 #include <CheatStengine/MainLayer.h>
 #include <CheatStengine/UI/ImGui/Fonts.h>
-
 #include <Engine/Core/Application.h>
 #include <Engine/Core/EntryPoint.h>
 #include <Engine/Core/Log.h>
+
+#include <IconsFontAwesome6.h>
 
 enum EditorCol_ {
     EditorCol_Primary1,
