@@ -121,6 +121,12 @@ void DisassemblyPane::AnalyzePage(uintptr_t pageAddr, size_t pageSize)
 
 void DisassemblyPane::Draw()
 {
+    static size_t counter = 0;
+    if (counter++ % 60 == 0) {
+        AnalyzePage(m_FocussedAddress, 0x1000);
+        counter = 0;
+    }
+
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2 { 0.0f, 0.0f });
     ImGui::Begin(m_Name.c_str(), &m_Open);
     ImGui::PopStyleVar();
