@@ -296,6 +296,12 @@ void DisassemblyPane::FocusAddress(uintptr_t address)
     }
 }
 
+void DisassemblyPane::SelectAddress(uintptr_t address)
+{
+    FocusAddress(address);
+    m_SelectedAddress = address;
+}
+
 void DisassemblyPane::AssembleModal(const std::string& name, const std::any& payload)
 {
     ImGui::SetNextWindowPos(ImGui::GetMainViewport()->GetCenter(), ImGuiCond_Appearing, ImVec2 { 0.5f, 0.5f });

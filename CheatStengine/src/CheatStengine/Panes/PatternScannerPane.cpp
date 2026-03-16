@@ -1,17 +1,21 @@
 #include "PatternScannerPane.h"
 
+#include "DisassemblyPane.h"
+
 #include <CheatStengine/Core/ModalManager.h>
 #include <CheatStengine/Icons/MaterialDesignIcons.h>
 #include <CheatStengine/Utils.h>
 
 #include <CheatStengine/Assembly/Formatter.h>
+#include <CheatStengine/UI/ImGui/Menu.h>
 #include <imgui.h>
 #include <imgui_stdlib.h>
 
-PatternScannerPane::PatternScannerPane(State& state, ModalManager& modalManager, KeybindManager& keybindManager)
+PatternScannerPane::PatternScannerPane(State& state, MainLayer& mainLayer)
     : Pane(ICON_MDI_REGEX " Pattern Scanner", state)
-    , m_ModalManager(modalManager)
-    , m_KeybindManager(keybindManager)
+    , m_MainLayer(mainLayer)
+    , m_ModalManager(mainLayer.GetModalManager())
+    , m_KeybindManager(mainLayer.GetKeybindManager())
     , m_PatternScanner(state.Process)
 {
     m_ModalManager.RegisterModal("Scan Pattern", BIND_FN(PatternScannerPane::ScanPatternModal));
@@ -87,7 +91,7 @@ void PatternScannerPane::PerformPatternScan(std::string_view pattern, const MODU
     m_State.PatternScanResults.emplace_back(std::string(pattern), formattedResults);
 }
 
-void PatternScannerPane::DrawPatternScanResults(PatternScan& patternScan)
+void PatternScannerPane::DrawPatternScanResults(PatternScan& patternScan) const
 {
     ImGui::PushStyleVar(ImGuiStyleVar_CellPadding, ImVec2 { 3, 2 });
     if (ImGui::BeginTable("PatternScannerResults", 2, ImGuiTableFlags_Resizable | ImGuiTableFlags_BordersV | ImGuiTableFlags_BordersOuterH | ImGuiTableFlags_ScrollY)) {
@@ -125,8 +129,32 @@ void PatternScannerPane::DrawPatternScanResults(PatternScan& patternScan)
                 ImGui::TableSetColumnIndex(0);
                 std::string selectableLabel = std::format("##pattern_scan_span_{}_{:X}", i, result.Address);
                 if (ImGui::Selectable(selectableLabel.c_str(), isSelected,
-                        ImGuiSelectableFlags_SpanAllColumns | ImGuiSelectableFlags_AllowOverlap)) {
+                        ImGuiSelectableFlags_SpanAllColumns | ImGuiSelectableFlags_AllowDoubleClick)) {
                     patternScan.SelectedIndex = i;
+                }
+                if (ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left)) {
+                    DisassemblyPane& disassemblyPane = *m_MainLayer.GetPane<DisassemblyPane>();
+                    disassemblyPane.SelectAddress(result.Address);
+                    disassemblyPane.ForceFocus();
+                }
+
+                if (ImGui::BeginPopupContextItem()) {
+                    patternScan.SelectedIndex = i;
+                    if (ImGui::BeginRoundedMenu("Copy")) {
+                        if (ImGui::RoundedMenuItem("Address")) {
+                            ImGui::SetClipboardText(std::format("0x{:X}", result.Address).c_str());
+                        }
+                        if (ImGui::RoundedMenuItem("Instruction")) {
+                            ImGui::SetClipboardText(result.Instruction.c_str());
+                        }
+                        if (modEntry) {
+                            if (ImGui::RoundedMenuItem("RVA")) {
+                                ImGui::SetClipboardText(std::format("0x{:X}", result.Address - reinterpret_cast<uintptr_t>(modEntry->modBaseAddr)).c_str());
+                            }
+                        }
+                        ImGui::EndMenu();
+                    }
+                    ImGui::EndPopup();
                 }
             }
         }

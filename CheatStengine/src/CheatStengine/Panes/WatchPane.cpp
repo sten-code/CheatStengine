@@ -6,6 +6,7 @@
 #include <CheatStengine/UI/ImGui/EditableLabel.h>
 #include <CheatStengine/Utils.h>
 
+#include <CheatStengine/UI/ImGui/Menu.h>
 #include <imgui.h>
 #include <imgui_stdlib.h>
 
@@ -99,16 +100,10 @@ void WatchPane::Draw()
 
                 if (ImGui::BeginPopupContextItem()) {
                     m_SelectedIndex = i;
-                    if (ImGui::BeginMenu("Copy Address")) {
-                        if (ImGui::MenuItem("As Hex")) {
-                            ImGui::SetClipboardText(std::format("0x{:X}", memoryAddr.Address).c_str());
-                        }
-                        if (ImGui::MenuItem("As Decimal")) {
-                            ImGui::SetClipboardText(std::to_string(memoryAddr.Address).c_str());
-                        }
-                        ImGui::EndMenu();
+                    if (ImGui::RoundedMenuItem("Copy Address")) {
+                        ImGui::SetClipboardText(std::format("0x{:X}", memoryAddr.Address).c_str());
                     }
-                    if (ImGui::MenuItem("Delete")) {
+                    if (ImGui::RoundedMenuItem("Delete")) {
                         DeleteSelectedAddress();
                     }
                     ImGui::EndPopup();

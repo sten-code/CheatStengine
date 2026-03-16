@@ -1,7 +1,7 @@
 #pragma once
 
-#include <CheatStengine/Core/ModalManager.h>
 #include <CheatStengine/Core/KeybindManager.h>
+#include <CheatStengine/Core/ModalManager.h>
 #include <CheatStengine/Panes/Pane.h>
 #include <CheatStengine/UI/MenuBar.h>
 #include <CheatStengine/UI/TitleBar.h>
@@ -29,6 +29,11 @@ public:
 
     std::vector<std::unique_ptr<Pane>>& GetPanes() { return m_Panes; }
     const std::vector<std::unique_ptr<Pane>>& GetPanes() const { return m_Panes; }
+
+    [[nodiscard]] ModalManager& GetModalManager() { return m_ModalManager; }
+    [[nodiscard]] const ModalManager& GetModalManager() const { return m_ModalManager; }
+    [[nodiscard]] KeybindManager& GetKeybindManager() { return m_KeybindManager; }
+    [[nodiscard]] const KeybindManager& GetKeybindManager() const { return m_KeybindManager; }
 
 private:
     Window& m_Window;

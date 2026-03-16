@@ -35,6 +35,7 @@ public:
     void Draw() override;
 
     void FocusAddress(uintptr_t address);
+    void SelectAddress(uintptr_t address);
 
 private:
     static void DrawFormattedInstruction(const FormattedInstruction& instr);
