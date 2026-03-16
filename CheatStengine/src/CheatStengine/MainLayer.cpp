@@ -30,7 +30,7 @@ MainLayer::MainLayer(Window& window)
     AddPane<WatchPane>(m_State, m_ModalManager);
     AddPane<MemoryScannerPane>(m_State);
     AddPane<DisassemblyPane>(m_State, m_ModalManager, m_KeybindManager);
-    AddPane<PatternScannerPane>(m_State);
+    AddPane<PatternScannerPane>(m_State, m_ModalManager, m_KeybindManager);
     StructDissectPane& structDissectPane = AddPane<StructDissectPane>(m_State, m_ModalManager);
 
     // AddressEvaluator::Result result = AddressEvaluator::Evaluate("robloxplayerbeta.exe+0x7D02728", m_State.Process);
@@ -181,7 +181,7 @@ void MainLayer::DrawOpenProcessList()
 
             if (ImGui::Selectable(proc.szExeFile)) {
                 m_State.Process = Process(proc.th32ProcessID);
-                // m_DisassemblyPane.Analyze(m_Process, 0);
+                m_State.Modules = m_State.Process.GetModuleEntries();
                 ImGui::CloseCurrentPopup();
             }
 
@@ -218,7 +218,7 @@ void MainLayer::DrawOpenWindowList()
 
             if (ImGui::Selectable(window.Title.c_str())) {
                 m_State.Process = Process(window.Pid);
-                // m_DisassemblyPane.Analyze(m_Process, 0);
+                m_State.Modules = m_State.Process.GetModuleEntries();
                 ImGui::CloseCurrentPopup();
             }
 

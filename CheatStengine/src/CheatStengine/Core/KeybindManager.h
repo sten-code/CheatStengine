@@ -29,7 +29,7 @@ public:
         ImGuiKeyChord keyChord,
         std::function<void()> callback = nullptr)
     {
-        INFO("Registering keybind: {}, chord: {}, category: {}", name, ImGui::GetKeyChordName(keyChord), category);
+        // INFO("Registering keybind: {}, chord: {}, category: {}", name, ImGui::GetKeyChordName(keyChord), category);
         Keybind& keybind = m_Keybinds.emplace(
                                          std::piecewise_construct,
                                          std::forward_as_tuple(name),

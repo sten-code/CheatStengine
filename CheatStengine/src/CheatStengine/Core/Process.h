@@ -48,7 +48,7 @@ public:
     /// </summary>
     /// <param name="name"></param>
     /// <returns>If no module is found, an empty MODULEENTRY32 struct is returned.</returns>
-    [[nodiscard]] MODULEENTRY32 GetModuleEntry(const std::string& name) const;
+    [[nodiscard]] MODULEENTRY32 GetModuleEntry(std::string_view name) const;
 
     /// <summary>
     /// Finds all modules within the process.

@@ -27,25 +27,6 @@ struct ChangeSizePayload {
     Field& Field;
 };
 
-std::string StructDissectPane::FormatFieldValue(const FieldValue& fieldValue, const Field& field)
-{
-    overloads visitor {
-        [&]<std::integral T>(T value) -> std::string {
-            switch (field.Type) {
-                case FieldType::HexInt: return std::format("0x{:X}", value);
-                case FieldType::SignedDecInt: return std::format("{}", static_cast<std::make_signed_t<T>>(value));
-                case FieldType::UnsignedDecInt: return std::format("{}", value);
-                default: return "Invalid Type";
-            }
-        },
-        [&]<std::floating_point T>(T value) { return std::format("{}", value); },
-        [&](const Pointer& ptr) { return std::format("0x{:X}", ptr.Address); },
-        [&](const StartEndPointer& ptr) { return std::format("[0x{:X} - 0x{:X}]", ptr.Start, ptr.End); },
-        [&](const std::string& str) { return Utils::EscapeString(str); },
-    };
-    return std::visit(visitor, fieldValue);
-}
-
 static FieldValue ParseUnsignedInteger(const std::string& str, size_t size, int base)
 {
     uint64_t value = std::stoull(str, nullptr, base);
@@ -88,6 +69,35 @@ static FieldValue ParseStartEndPointer(const std::string& str)
 static bool IsExpandableType(FieldType type)
 {
     return type == FieldType::Dissection || type == FieldType::Pointer || type == FieldType::StartEndPointer;
+}
+
+StructDissectPane::StructDissectPane(State& state, ModalManager& modalManager)
+    : Pane(ICON_MDI_CONTENT_CUT " Struct Dissect", state)
+    , m_ModalManager(modalManager)
+{
+    m_ModalManager.RegisterModal("Add Dissection", BIND_FN(StructDissectPane::AddDissectionModal));
+    m_ModalManager.RegisterModal("Add Element", BIND_FN(StructDissectPane::AddElementModal));
+    m_ModalManager.RegisterModal("Edit Value", BIND_FN(StructDissectPane::EditValueModal));
+    m_ModalManager.RegisterModal("Change Size", BIND_FN(StructDissectPane::ChangeSizeModal));
+}
+
+std::string StructDissectPane::FormatFieldValue(const FieldValue& fieldValue, const Field& field)
+{
+    overloads visitor {
+        [&]<std::integral T>(T value) -> std::string {
+            switch (field.Type) {
+                case FieldType::HexInt: return std::format("0x{:X}", value);
+                case FieldType::SignedDecInt: return std::format("{}", static_cast<std::make_signed_t<T>>(value));
+                case FieldType::UnsignedDecInt: return std::format("{}", value);
+                default: return "Invalid Type";
+            }
+        },
+        [&]<std::floating_point T>(T value) { return std::format("{}", value); },
+        [&](const Pointer& ptr) { return std::format("0x{:X}", ptr.Address); },
+        [&](const StartEndPointer& ptr) { return std::format("[0x{:X} - 0x{:X}]", ptr.Start, ptr.End); },
+        [&](const std::string& str) { return Utils::EscapeString(str); },
+    };
+    return std::visit(visitor, fieldValue);
 }
 
 FieldValue StructDissectPane::ParseFieldValue(const std::string& str, const Field& field)
@@ -299,16 +309,6 @@ void StructDissectPane::PerformSearch(Dissection& dissection)
         m_SearchDepth = 0;
         INFO("No search results found for \"{}\"", m_SearchQuery);
     }
-}
-
-StructDissectPane::StructDissectPane(State& state, ModalManager& modalManager)
-    : Pane(ICON_MDI_CONTENT_CUT " Struct Dissect", state)
-    , m_ModalManager(modalManager)
-{
-    m_ModalManager.RegisterModal("Add Dissection", BIND_FN(StructDissectPane::AddDissectionModal));
-    m_ModalManager.RegisterModal("Add Element", BIND_FN(StructDissectPane::AddElementModal));
-    m_ModalManager.RegisterModal("Edit Value", BIND_FN(StructDissectPane::EditValueModal));
-    m_ModalManager.RegisterModal("Change Size", BIND_FN(StructDissectPane::ChangeSizeModal));
 }
 
 void StructDissectPane::Draw()

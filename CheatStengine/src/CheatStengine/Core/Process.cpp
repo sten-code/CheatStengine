@@ -137,7 +137,7 @@ std::string Process::GetName() const
     return {};
 }
 
-MODULEENTRY32 Process::GetModuleEntry(const std::string& name) const
+MODULEENTRY32 Process::GetModuleEntry(std::string_view name) const
 {
     HANDLE snapshot = CreateToolhelp32Snapshot(TH32CS_SNAPMODULE | TH32CS_SNAPMODULE32, m_Pid);
     if (snapshot == INVALID_HANDLE_VALUE) {
@@ -149,7 +149,7 @@ MODULEENTRY32 Process::GetModuleEntry(const std::string& name) const
 
     if (Module32First(snapshot, &entry)) {
         do {
-            if (_stricmp(entry.szModule, name.c_str()) == 0) {
+            if (_stricmp(entry.szModule, name.data()) == 0) {
                 CloseHandle(snapshot);
                 return entry;
             }
@@ -281,10 +281,10 @@ static std::vector<int> ParsePattern(std::string_view pattern)
     return bytes;
 }
 
-static bool CompareSignature(const uint8_t* data, const int* sig, size_t sig_size)
+static bool CompareSignature(const uint8_t* data, const int* sig, size_t sigSize)
 {
     // This can be further optimized with SIMD instructions
-    for (size_t j = 0; j < sig_size; ++j) {
+    for (size_t j = 0; j < sigSize; ++j) {
         if (sig[j] != -1 && data[j] != static_cast<uint8_t>(sig[j])) {
             return false;
         }

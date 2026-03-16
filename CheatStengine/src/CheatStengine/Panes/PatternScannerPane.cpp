@@ -1,15 +1,26 @@
 #include "PatternScannerPane.h"
 
-#include "CheatStengine/Utils.h"
-
+#include <CheatStengine/Core/ModalManager.h>
 #include <CheatStengine/Icons/MaterialDesignIcons.h>
+#include <CheatStengine/Utils.h>
 
 #include <imgui.h>
+#include <imgui_stdlib.h>
 
-PatternScannerPane::PatternScannerPane(State& state)
+PatternScannerPane::PatternScannerPane(State& state, ModalManager& modalManager, KeybindManager& keybindManager)
     : Pane(ICON_MDI_REGEX " Pattern Scanner", state)
+    , m_ModalManager(modalManager)
+    , m_KeybindManager(keybindManager)
+    , m_PatternScanner(state.Process)
 {
-    m_State.PatternScanResults.push_back({"FF FF FF", {0x0}});
+    m_ModalManager.RegisterModal("Scan Pattern", BIND_FN(PatternScannerPane::ScanPatternModal));
+    m_KeybindManager.RegisterKeybind(
+        "Scan Pattern",
+        "Scan a byte pattern in the process's memory",
+        "Pattern Scanner", ImGuiKey_B | ImGuiMod_Alt, [this]() {
+            m_ModalManager.OpenModal("Scan Pattern");
+        });
+    m_State.PatternScanResults.push_back({ "FF FF FF", { 0x0 } });
 }
 
 void PatternScannerPane::Draw()
@@ -77,4 +88,49 @@ void PatternScannerPane::DrawPatternScanResults(PatternScanResult& result)
         ImGui::EndTable();
     }
     ImGui::PopStyleVar();
+}
+
+void PatternScannerPane::ScanPatternModal(const std::string& name, const std::any& payload)
+{
+    ImGui::SetNextWindowPos(ImGui::GetMainViewport()->GetCenter(), ImGuiCond_Appearing, ImVec2 { 0.5f, 0.5f });
+    if (ImGui::BeginPopupModal(name.c_str(), nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
+        if (ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows)
+            && ImGui::IsKeyPressed(ImGuiKey_Escape)) {
+            ImGui::CloseCurrentPopup();
+        }
+
+        if (ImGui::IsWindowAppearing()) {
+            ImGui::SetKeyboardFocusHere();
+        }
+
+        static std::string pattern;
+        ImGui::Text("What pattern do you want to scan for? (IDA Style)");
+        ImGui::InputText("##pattern", &pattern);
+
+        std::vector<const char*> moduleItems;
+        moduleItems.reserve(m_State.Modules.size());
+        for (const MODULEENTRY32& moduleEntry : m_State.Modules) {
+            moduleItems.emplace_back(moduleEntry.szModule);
+        }
+
+        static int selectedModuleIndex = 0;
+        if (!moduleItems.empty()) {
+            ImGui::Combo("Module", &selectedModuleIndex, moduleItems.data(), static_cast<int>(moduleItems.size()));
+        } else {
+            ImGui::TextDisabled("No modules loaded");
+        }
+
+        if (ImGui::Button("Ok", ImVec2 { 70.0f, 0 })) {
+            std::vector<uintptr_t> results = m_PatternScanner.PatternScan(pattern, moduleItems[selectedModuleIndex]);
+            m_State.PatternScanResults.push_back({ pattern, results });
+            ForceFocus();
+            ImGui::CloseCurrentPopup();
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("Cancel", ImVec2 { 70.0f, 0 })) {
+            ImGui::CloseCurrentPopup();
+        }
+
+        ImGui::EndPopup();
+    }
 }

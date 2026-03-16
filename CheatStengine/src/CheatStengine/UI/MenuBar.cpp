@@ -80,6 +80,9 @@ void MenuBar::Draw()
             if (ImGui::RoundedMenuItemEx("Allocate Memory", ICON_MDI_PLUS_BOX, m_KeybindManager.GetKeybindString("Allocate Memory").c_str())) {
                 m_ModalManager.OpenModal("Allocate Memory");
             }
+            if (ImGui::RoundedMenuItemEx("Scan Pattern", ICON_MDI_REGEX, m_KeybindManager.GetKeybindString("Scan Pattern").c_str())) {
+                m_ModalManager.OpenModal("Scan Pattern");
+            }
             ImGui::EndMenu();
         }
     }
