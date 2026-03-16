@@ -110,8 +110,6 @@ void PatternScannerPane::DrawPatternScanResults(PatternScan& patternScan) const
 
                 // Address
                 ImGui::TableSetColumnIndex(0);
-                ImGui::SetCursorPosX(ImGui::GetCursorPosX() + 4);
-                ImGui::SetCursorPosY(ImGui::GetCursorPosY() + (ImGui::GetTextLineHeightWithSpacing() / 2 - ImGui::GetTextLineHeight() / 2));
                 std::optional<MODULEENTRY32> modEntry = Utils::GetModuleForAddress(result.Address, m_State.Modules);
                 if (modEntry) {
                     ImGui::Text("%s+0x%llX", modEntry->szModule, result.Address - reinterpret_cast<uintptr_t>(modEntry->modBaseAddr));
@@ -121,7 +119,6 @@ void PatternScannerPane::DrawPatternScanResults(PatternScan& patternScan) const
 
                 // Instruction
                 ImGui::TableSetColumnIndex(1);
-                ImGui::SetCursorPosY(ImGui::GetCursorPosY() + (ImGui::GetTextLineHeightWithSpacing() / 2 - ImGui::GetTextLineHeight() / 2));
                 ImGui::Text("%s", result.Instruction.c_str());
 
                 ImGui::SameLine();
