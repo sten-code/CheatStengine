@@ -1,24 +1,28 @@
-include(FetchContent)
+set(IMGUI_DIR ${CMAKE_CURRENT_SOURCE_DIR}/vendor/imgui)
 
-FetchContent_Declare(
-        imgui
-        GIT_REPOSITORY https://github.com/ocornut/imgui.git
-        GIT_TAG v1.92.3-docking
-)
-FetchContent_MakeAvailable(imgui)
+if (NOT EXISTS ${IMGUI_DIR})
+    include(FetchContent)
+    FetchContent_Declare(
+            imgui
+            GIT_REPOSITORY https://github.com/ocornut/imgui.git
+            GIT_TAG v1.92.3-docking
+            SOURCE_DIR ${IMGUI_DIR}
+    )
+    FetchContent_MakeAvailable(imgui)
+endif ()
 
 add_library(imgui STATIC
-        ${imgui_SOURCE_DIR}/backends/imgui_impl_dx11.cpp
-        ${imgui_SOURCE_DIR}/backends/imgui_impl_win32.cpp
-        ${imgui_SOURCE_DIR}/misc/cpp/imgui_stdlib.cpp
-        ${imgui_SOURCE_DIR}/imgui.cpp
-        ${imgui_SOURCE_DIR}/imgui_demo.cpp
-        ${imgui_SOURCE_DIR}/imgui_draw.cpp
-        ${imgui_SOURCE_DIR}/imgui_tables.cpp
-        ${imgui_SOURCE_DIR}/imgui_widgets.cpp
+        ${IMGUI_DIR}/backends/imgui_impl_dx11.cpp
+        ${IMGUI_DIR}/backends/imgui_impl_win32.cpp
+        ${IMGUI_DIR}/misc/cpp/imgui_stdlib.cpp
+        ${IMGUI_DIR}/imgui.cpp
+        ${IMGUI_DIR}/imgui_demo.cpp
+        ${IMGUI_DIR}/imgui_draw.cpp
+        ${IMGUI_DIR}/imgui_tables.cpp
+        ${IMGUI_DIR}/imgui_widgets.cpp
 )
 target_include_directories(imgui PUBLIC
-        ${imgui_SOURCE_DIR}
-        ${imgui_SOURCE_DIR}/backends
-        ${imgui_SOURCE_DIR}/misc/cpp
+        ${IMGUI_DIR}
+        ${IMGUI_DIR}/backends
+        ${IMGUI_DIR}/misc/cpp
 )

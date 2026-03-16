@@ -1,6 +1,7 @@
 project(CheatStengine)
 
 include(vendor/zasm.cmake)
+#include(vendor/imgui_hex_editor.cmake)
 
 file(GLOB_RECURSE SOURCE_FILES src/*.cpp)
 add_executable(${PROJECT_NAME} ${SOURCE_FILES}
