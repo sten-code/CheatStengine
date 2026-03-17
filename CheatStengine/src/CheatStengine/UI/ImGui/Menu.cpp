@@ -119,7 +119,7 @@ namespace ImGui {
                 if (shortcut_w > 0.0f) {
                     PushStyleColor(ImGuiCol_Text, style.Colors[ImGuiCol_TextDisabled]);
                     LogSetNextTextDecoration("(", ")");
-                    RenderText(bb.Min + style.FramePadding + ImVec2(offsets->OffsetShortcut + stretch_w, 0), shortcut, NULL, false);
+                    RenderText(ImVec2(bb.Max.x - shortcut_w - style.FramePadding.x, bb.Min.y + style.FramePadding.y), shortcut, NULL, false);
                     PopStyleColor();
                 }
                 if (selected)
