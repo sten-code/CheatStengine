@@ -6,6 +6,7 @@
 #include <CheatStengine/UI/ImGui/Menu.h>
 #include <CheatStengine/Utils.h>
 
+#include <CheatStengine/UI/ImGui/Fonts.h>
 #include <IconsMaterialDesignIcons.h>
 #include <imgui.h>
 #include <imgui_stdlib.h>
@@ -96,6 +97,7 @@ void PatternScannerPane::PerformPatternScan(std::string_view pattern, const MODU
 
 void PatternScannerPane::DrawPatternScanResults(PatternScan& patternScan) const
 {
+    Fonts::Push(Fonts::Type::JetBrainsMono);
     ImGui::PushStyleVar(ImGuiStyleVar_CellPadding, ImVec2 { 3, 2 });
     if (ImGui::BeginTable("PatternScannerResults", 2, ImGuiTableFlags_Resizable | ImGuiTableFlags_BordersV | ImGuiTableFlags_BordersOuterH | ImGuiTableFlags_ScrollY)) {
         ImGui::TableSetupColumn("Address");
@@ -162,6 +164,7 @@ void PatternScannerPane::DrawPatternScanResults(PatternScan& patternScan) const
         ImGui::EndTable();
     }
     ImGui::PopStyleVar();
+    Fonts::Pop();
 }
 
 void PatternScannerPane::ScanPatternModal(const std::string& name, const std::any& payload)
