@@ -7,34 +7,6 @@
 #include <Engine/Core/EntryPoint.h>
 #include <Engine/Core/Log.h>
 
-#include <IconsFontAwesome6.h>
-
-enum EditorCol_ {
-    EditorCol_Primary1,
-    EditorCol_Primary2,
-    EditorCol_Primary3,
-    EditorCol_Secondary1,
-    EditorCol_Secondary2,
-    EditorCol_Accent1,
-    EditorCol_Accent2,
-    EditorCol_Text1,
-    EditorCol_Text2,
-    EditorCol_Background1,
-    EditorCol_Background2,
-    EditorCol_Background3,
-    EditorCol_Background4,
-    EditorCol_Error,
-    EditorCol_Warning,
-    EditorCol_Success,
-    EditorCol_COUNT
-};
-
-inline static ImVec4 RGBA(uint8_t r, uint8_t g, uint8_t b, uint8_t a = 255)
-{
-    constexpr float inv255 = 1.0f / 255.0f;
-    return ImVec4 { r * inv255, g * inv255, b * inv255, a * inv255 };
-};
-
 class CheatStengine final : public Application {
 public:
     explicit CheatStengine()
@@ -55,65 +27,6 @@ public:
         style.TabBarBorderSize = 1.0f;
         style.WindowBorderSize = 1.0f;
         style.DockingSeparatorSize = 1.0f;
-
-        std::array<ImVec4, EditorCol_COUNT> m_ColorPallete;
-        m_ColorPallete[EditorCol_Primary1] = RGBA(77, 77, 79);
-        m_ColorPallete[EditorCol_Primary2] = RGBA(70, 70, 77);
-        m_ColorPallete[EditorCol_Primary3] = RGBA(30, 30, 30);
-        m_ColorPallete[EditorCol_Secondary1] = RGBA(20, 20, 20);
-        m_ColorPallete[EditorCol_Secondary2] = RGBA(55, 55, 61);
-        m_ColorPallete[EditorCol_Accent1] = RGBA(66, 150, 250);
-        m_ColorPallete[EditorCol_Accent2] = RGBA(96, 115, 181);
-        m_ColorPallete[EditorCol_Text1] = RGBA(255, 255, 255);
-        m_ColorPallete[EditorCol_Text2] = RGBA(128, 128, 128);
-        m_ColorPallete[EditorCol_Background1] = RGBA(37, 37, 38);
-        m_ColorPallete[EditorCol_Background2] = RGBA(30, 30, 30);
-        m_ColorPallete[EditorCol_Background3] = RGBA(51, 51, 51);
-        m_ColorPallete[EditorCol_Background4] = RGBA(0, 0, 0);
-        m_ColorPallete[EditorCol_Error] = RGBA(219, 72, 115); // Errors
-        m_ColorPallete[EditorCol_Warning] = RGBA(213, 152, 87); // Warnings
-        m_ColorPallete[EditorCol_Success] = RGBA(174, 243, 87); // Success
-
-        // style.Colors[ImGuiCol_WindowBg] = m_ColorPallete[EditorCol_Background1];
-        // style.Colors[ImGuiCol_PopupBg] = m_ColorPallete[EditorCol_Background2];
-        // style.Colors[ImGuiCol_Border] = m_ColorPallete[EditorCol_Secondary2];
-        // style.Colors[ImGuiCol_Header] = m_ColorPallete[EditorCol_Primary3];
-        // style.Colors[ImGuiCol_HeaderHovered] = m_ColorPallete[EditorCol_Primary2];
-        // style.Colors[ImGuiCol_HeaderActive] = m_ColorPallete[EditorCol_Secondary2];
-        // style.Colors[ImGuiCol_Button] = m_ColorPallete[EditorCol_Primary3];
-        // style.Colors[ImGuiCol_ButtonHovered] = m_ColorPallete[EditorCol_Primary1];
-        // style.Colors[ImGuiCol_ButtonActive] = m_ColorPallete[EditorCol_Primary2];
-        // style.Colors[ImGuiCol_CheckMark] = m_ColorPallete[EditorCol_Text1];
-        // style.Colors[ImGuiCol_SliderGrab] = m_ColorPallete[EditorCol_Secondary2];
-        // style.Colors[ImGuiCol_SliderGrabActive] = m_ColorPallete[EditorCol_Accent1];
-        // style.Colors[ImGuiCol_FrameBg] = m_ColorPallete[EditorCol_Primary3];
-        // style.Colors[ImGuiCol_FrameBgHovered] = m_ColorPallete[EditorCol_Primary1];
-        // style.Colors[ImGuiCol_FrameBgActive] = m_ColorPallete[EditorCol_Primary2];
-        // style.Colors[ImGuiCol_Tab] = m_ColorPallete[EditorCol_Background2];
-        // style.Colors[ImGuiCol_TabHovered] = m_ColorPallete[EditorCol_Secondary2];
-        // style.Colors[ImGuiCol_TabActive] = m_ColorPallete[EditorCol_Secondary2];
-        // style.Colors[ImGuiCol_TabSelectedOverline] = m_ColorPallete[EditorCol_Accent1];
-        // style.Colors[ImGuiCol_TabDimmedSelectedOverline] = m_ColorPallete[EditorCol_Primary1];
-        // style.Colors[ImGuiCol_TabUnfocused] = m_ColorPallete[EditorCol_Secondary2];
-        // style.Colors[ImGuiCol_TabUnfocusedActive] = m_ColorPallete[EditorCol_Secondary2];
-        // style.Colors[ImGuiCol_TableRowBg] = m_ColorPallete[EditorCol_Background2];
-        // style.Colors[ImGuiCol_TableRowBgAlt] = m_ColorPallete[EditorCol_Background1];
-        // style.Colors[ImGuiCol_TitleBg] = m_ColorPallete[EditorCol_Background2];
-        // style.Colors[ImGuiCol_TitleBgActive] = m_ColorPallete[EditorCol_Background2];
-        // style.Colors[ImGuiCol_TitleBgCollapsed] = m_ColorPallete[EditorCol_Background2];
-        // style.Colors[ImGuiCol_ScrollbarGrab] = m_ColorPallete[EditorCol_Secondary2];
-        // style.Colors[ImGuiCol_ResizeGrip] = m_ColorPallete[EditorCol_Secondary2];
-        // style.Colors[ImGuiCol_ResizeGripHovered] = m_ColorPallete[EditorCol_Secondary2];
-        // style.Colors[ImGuiCol_ResizeGripActive] = m_ColorPallete[EditorCol_Secondary2];
-        // style.Colors[ImGuiCol_Separator] = m_ColorPallete[EditorCol_Primary2];
-        // style.Colors[ImGuiCol_SeparatorHovered] = m_ColorPallete[EditorCol_Secondary2];
-        // style.Colors[ImGuiCol_SeparatorActive] = m_ColorPallete[EditorCol_Secondary2];
-        // style.Colors[ImGuiCol_Text] = m_ColorPallete[EditorCol_Text1];
-        // style.Colors[ImGuiCol_TextDisabled] = m_ColorPallete[EditorCol_Text2];
-        // style.Colors[ImGuiCol_MenuBarBg] = m_ColorPallete[EditorCol_Secondary1];
-
-        // style.WindowTitleAlign = ImVec2(0.5f, 0.5f);
-        // style.WindowMenuButtonPosition = ImGuiDir_None;
 
         Fonts::LoadFonts();
 
