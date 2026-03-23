@@ -7,5 +7,4 @@ public:
     explicit DebugPane(State& state);
 
     void Draw(double deltaTime) override;
-
 };

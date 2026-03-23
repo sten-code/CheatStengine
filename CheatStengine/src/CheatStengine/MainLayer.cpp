@@ -74,11 +74,8 @@ void MainLayer::OnImGuiRender()
 
 void MainLayer::OnImGuiRenderDock()
 {
-    static double lastTime = 0.0;
-    double currentTime = ImGui::GetTime();
-    double deltaTime = currentTime - lastTime;
-    double fps = 1.0 / deltaTime;
-    lastTime = currentTime;
+    ImGuiIO& io = ImGui::GetIO();
+    double deltaTime = io.DeltaTime;
 
     for (const std::unique_ptr<Pane>& pane : m_Panes) {
         if (pane->IsOpen()) {

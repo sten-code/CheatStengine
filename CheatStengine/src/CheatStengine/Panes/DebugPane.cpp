@@ -1,6 +1,4 @@
 #include "DebugPane.h"
-#include <CheatStengine/MainLayer.h>
-#include <CheatStengine/UI/ImGui/Menu.h>
 
 #include <IconsMaterialDesignIcons.h>
 #include <imgui.h>
@@ -18,7 +16,6 @@ void DebugPane::Draw(double deltaTime)
 
     ImGui::Text("FPS: %f", fps);
     ImGui::Text("Delta Time: %f ms", deltaTime * 1000.0);
-
 
     ImGui::End();
 }
