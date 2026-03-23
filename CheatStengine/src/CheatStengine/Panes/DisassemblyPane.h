@@ -32,7 +32,7 @@ public:
     void Analyze(uintptr_t address);
     void AnalyzePage(uintptr_t pageAddr, size_t pageSize);
 
-    void Draw() override;
+    void Draw(double deltaTime) override;
 
     void FocusAddress(uintptr_t address);
     void SelectAddress(uintptr_t address);

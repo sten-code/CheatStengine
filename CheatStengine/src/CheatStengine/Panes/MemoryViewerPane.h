@@ -7,7 +7,7 @@ class MemoryViewerPane final : public Pane {
 public:
     explicit MemoryViewerPane(State& state);
 
-    void Draw() override;
+    void Draw(double deltaTime) override;
 
 private:
     ImGuiHexEditorState m_HexState;

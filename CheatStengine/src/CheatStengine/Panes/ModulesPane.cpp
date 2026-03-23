@@ -13,19 +13,7 @@ ModulesPane::ModulesPane(State& state)
 {
 }
 
-// void ModulesPane::SetModules(const std::vector<MODULEENTRY32>& modules)
-// {
-//     m_Modules = modules;
-//     std::ranges::sort(m_Modules, [](const MODULEENTRY32& a, const MODULEENTRY32& b) {
-//         std::string aName = a.szModule;
-//         std::string bName = b.szModule;
-//         std::ranges::transform(aName, aName.begin(), ::tolower);
-//         std::ranges::transform(bName, bName.begin(), ::tolower);
-//         return aName < bName;
-//     });
-// }
-
-void ModulesPane::Draw()
+void ModulesPane::Draw(double deltaTime)
 {
     ImGui::Begin(m_Name.c_str(), &m_Open);
 

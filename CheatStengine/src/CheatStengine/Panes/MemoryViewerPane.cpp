@@ -45,7 +45,7 @@ MemoryViewerPane::MemoryViewerPane(State& state)
     m_HexState.MaxBytes = 0x7FFFFFFFFFFF;
 }
 
-void MemoryViewerPane::Draw()
+void MemoryViewerPane::Draw(double deltaTime)
 {
     ImGui::Begin("Memory Viewer", &m_Open);
 

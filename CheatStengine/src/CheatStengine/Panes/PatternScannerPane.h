@@ -21,7 +21,7 @@ class PatternScannerPane final : public Pane {
 public:
     explicit PatternScannerPane(State& state, MainLayer& mainLayer);
 
-    void Draw() override;
+    void Draw(double deltaTime) override;
 
     void PerformPatternScan(std::string_view pattern, const MODULEENTRY32& moduleEntry) const;
 

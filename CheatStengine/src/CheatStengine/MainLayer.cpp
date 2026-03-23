@@ -2,6 +2,7 @@
 
 #include <CheatStengine/AddressEvaluator/Error.h>
 #include <CheatStengine/AddressEvaluator/Evaluator.h>
+#include <CheatStengine/Panes/DebugPane.h>
 #include <CheatStengine/Panes/DisassemblyPane.h>
 #include <CheatStengine/Panes/MemoryScannerPane.h>
 #include <CheatStengine/Panes/ModulesPane.h>
@@ -30,6 +31,7 @@ MainLayer::MainLayer(Window& window)
     AddPane<MemoryScannerPane>(m_State);
     AddPane<DisassemblyPane>(m_State, m_ModalManager, m_KeybindManager);
     AddPane<PatternScannerPane>(m_State, *this);
+    AddPane<DebugPane>(m_State);
     StructDissectPane& structDissectPane = AddPane<StructDissectPane>(m_State, m_ModalManager, m_KeybindManager);
 
     // AddressEvaluator::Result result = AddressEvaluator::Evaluate("robloxplayerbeta.exe+0x7D02728", m_State.Process);
@@ -84,16 +86,9 @@ void MainLayer::OnImGuiRenderDock()
                 ImGui::SetNextWindowFocus();
                 pane->UnforceFocus();
             }
-            pane->Draw();
+            pane->Draw(deltaTime);
         }
     }
-
-    ImGui::Begin(ICON_MDI_BUG " Debug");
-
-    ImGui::Text("FPS: %f", fps);
-    ImGui::Text("Delta Time: %f ms", deltaTime * 1000.0);
-
-    ImGui::End();
 
     m_ModalManager.RenderModals();
 

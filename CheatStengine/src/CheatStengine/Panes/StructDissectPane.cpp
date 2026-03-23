@@ -315,7 +315,7 @@ void StructDissectPane::PerformSearch(Dissection& dissection)
     }
 }
 
-void StructDissectPane::Draw()
+void StructDissectPane::Draw(double deltaTime)
 {
     ImGui::Begin(m_Name.c_str(), &m_Open);
     ImVec2 currentScreenPosition = ImGui::GetCursorScreenPos();

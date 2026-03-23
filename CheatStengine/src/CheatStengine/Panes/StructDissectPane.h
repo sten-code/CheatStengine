@@ -11,7 +11,7 @@ class StructDissectPane final : public Pane {
 public:
     explicit StructDissectPane(State& state, ModalManager& modalManager, KeybindManager& keybindManager);
 
-    void Draw() override;
+    void Draw(double deltaTime) override;
 
     void AddDissection(const std::string& name, uintptr_t address) const;
 

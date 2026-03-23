@@ -27,7 +27,7 @@ PatternScannerPane::PatternScannerPane(State& state, MainLayer& mainLayer)
         });
 }
 
-void PatternScannerPane::Draw()
+void PatternScannerPane::Draw(double deltaTime)
 {
     ImGui::Begin(m_Name.c_str(), &m_Open);
 

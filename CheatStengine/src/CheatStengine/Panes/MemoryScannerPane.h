@@ -19,7 +19,7 @@ class MemoryScannerPane final : public Pane {
 public:
     explicit MemoryScannerPane(State& state);
 
-    void Draw() override;
+    void Draw(double deltaTime) override;
 
     void StartFirstScan();
 

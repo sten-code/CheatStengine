@@ -10,7 +10,7 @@ class WatchPane final : public Pane {
 public:
     explicit WatchPane(State& state, ModalManager& modalManager);
 
-    void Draw() override;
+    void Draw(double deltaTime) override;
 
 private:
     void HandleKeyboardShortcuts();

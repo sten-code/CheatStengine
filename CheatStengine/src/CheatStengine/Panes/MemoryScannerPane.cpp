@@ -40,7 +40,7 @@ MemoryScannerPane::MemoryScannerPane(State& state)
 {
 }
 
-void MemoryScannerPane::Draw()
+void MemoryScannerPane::Draw(double deltaTime)
 {
     ImGui::Begin(m_Name.c_str(), &m_Open);
 

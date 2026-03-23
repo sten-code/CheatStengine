@@ -13,7 +13,7 @@ public:
         , m_Open(open) {}
     virtual ~Pane() = default;
 
-    virtual void Draw() = 0;
+    virtual void Draw(double deltaTime) = 0;
 
     void Open() { m_Open = true; }
     void Close() { m_Open = false; }

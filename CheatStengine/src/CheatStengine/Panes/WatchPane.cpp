@@ -17,7 +17,7 @@ WatchPane::WatchPane(State& state, ModalManager& modalManager)
     m_ModalManager.RegisterModal("Add Address", BIND_FN(WatchPane::AddAddressModal));
 }
 
-void WatchPane::Draw()
+void WatchPane::Draw(double deltaTime)
 {
     ImGui::Begin(m_Name.c_str(), &m_Open);
 

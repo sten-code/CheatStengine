@@ -119,7 +119,7 @@ void DisassemblyPane::AnalyzePage(uintptr_t pageAddr, size_t pageSize)
     }
 }
 
-void DisassemblyPane::Draw()
+void DisassemblyPane::Draw(double deltaTime)
 {
     static size_t counter = 0;
     if (counter++ % 60 == 0) {
