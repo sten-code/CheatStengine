@@ -14,8 +14,9 @@ namespace ImGui {
             return false;
 
         const ImGuiPopupData* upper_popup = &g.OpenPopupStack[g.BeginPopupStack.Size];
-        if (window->DC.NavLayerCurrent != upper_popup->ParentNavLayer)
+        if (window->DC.NavLayerCurrent != upper_popup->ParentNavLayer) {
             return false;
+        }
         return upper_popup->Window && (upper_popup->Window->Flags & ImGuiWindowFlags_ChildMenu) && IsWindowChildOf(upper_popup->Window, window, true, false);
     }
 
@@ -38,14 +39,16 @@ namespace ImGui {
 
         // See BeginMenuEx() for comments about this.
         const bool menuset_is_open = IsRootOfOpenMenuSet();
-        if (menuset_is_open)
+        if (menuset_is_open) {
             PushItemFlag(ImGuiItemFlags_NoWindowHoverableCheck, true);
+        }
 
         // We've been using the equivalent of ImGuiSelectableFlags_SetNavIdOnHover on all Selectable() since early Nav system days (commit 43ee5d73),
         // but I am unsure whether this should be kept at all. For now moved it to be an opt-in feature used by menus only.
         bool pressed;
-        if (!enabled)
+        if (!enabled) {
             BeginDisabled();
+        }
 
         // We use ImGuiSelectableFlags_NoSetKeyOwner to allow down on one menu item, move, up on another.
         const ImGuiButtonFlags button_flags = ImGuiButtonFlags_NoSetKeyOwner;
@@ -70,16 +73,15 @@ namespace ImGui {
             if (pressed && enabled)
                 CloseCurrentPopup();
 
-            const ImU32 col = GetColorU32(
-                (held && hovered) ? ImGuiCol_ButtonActive
-                    : hovered     ? ImGuiCol_ButtonHovered
-                                  : ImGuiCol_Button);
+            if (hovered) {
+                const ImU32 col = GetColorU32(ImGuiCol_MenuBarBg);
+                RenderNavHighlight(bb, id);
+                RenderFrame(bb.Min, bb.Max, col, true, style.FrameRounding);
+            }
 
-            RenderNavHighlight(bb, id);
-            RenderFrame(bb.Min, bb.Max, col, true, style.FrameRounding);
-
-            if (g.LastItemData.StatusFlags & ImGuiItemStatusFlags_Visible)
+            if (g.LastItemData.StatusFlags & ImGuiItemStatusFlags_Visible) {
                 RenderText(text_pos, label);
+            }
 
             PopStyleVar();
             window->DC.CursorPos.x += IM_TRUNC(style.ItemSpacing.x * (-1.0f + 0.5f)); // -1 spacing to compensate the spacing added when Selectable() did a SameLine(). It would also work to call SameLine() ourselves after the PopStyleVar().
@@ -102,37 +104,40 @@ namespace ImGui {
             bool hovered, held;
             pressed = ButtonBehavior(bb, id, &hovered, &held, button_flags);
 
-            if (pressed && enabled)
+            if (pressed && enabled) {
                 CloseCurrentPopup();
+            }
 
             if (hovered) {
-                const ImU32 col = GetColorU32((held && hovered) ? ImGuiCol_HeaderActive
-                        : hovered                               ? ImGuiCol_HeaderHovered
-                                                                : ImGuiCol_Header);
+                const ImU32 col = GetColorU32(ImGuiCol_MenuBarBg);
                 RenderNavHighlight(bb, id);
                 RenderFrame(bb.Min, bb.Max, col, true, style.FrameRounding);
             }
             if (g.LastItemData.StatusFlags & ImGuiItemStatusFlags_Visible) {
                 RenderText(bb.Min + style.FramePadding + ImVec2(offsets->OffsetLabel, 0), label);
-                if (icon_w > 0.0f)
+                if (icon_w > 0.0f) {
                     RenderText(bb.Min + style.FramePadding + ImVec2(offsets->OffsetIcon, 0), icon);
+                }
                 if (shortcut_w > 0.0f) {
                     PushStyleColor(ImGuiCol_Text, style.Colors[ImGuiCol_TextDisabled]);
                     LogSetNextTextDecoration("(", ")");
                     RenderText(ImVec2(bb.Max.x - shortcut_w - style.FramePadding.x, bb.Min.y + style.FramePadding.y), shortcut, NULL, false);
                     PopStyleColor();
                 }
-                if (selected)
+                if (selected) {
                     RenderCheckMark(window->DrawList, bb.Min + ImVec2(offsets->OffsetMark + stretch_w, g.FontSize * 0.134f * 0.5f + style.FramePadding.y), GetColorU32(ImGuiCol_Text), g.FontSize * 0.866f);
+                }
             }
         }
 
         IMGUI_TEST_ENGINE_ITEM_INFO(g.LastItemData.ID, label, g.LastItemData.StatusFlags | ImGuiItemStatusFlags_Checkable | (selected ? ImGuiItemStatusFlags_Checked : 0));
-        if (!enabled)
+        if (!enabled) {
             EndDisabled();
+        }
 
-        if (menuset_is_open)
+        if (menuset_is_open) {
             PopItemFlag();
+        }
 
         return pressed;
     }
@@ -156,8 +161,9 @@ namespace ImGui {
         // Sub-menus are ChildWindow so that mouse can be hovering across them (otherwise top-most popup menu would steal focus and not allow hovering on parent menu)
         // The first menu in a hierarchy isn't so hovering doesn't get across (otherwise e.g. resizing borders with ImGuiButtonFlags_FlattenChildren would react), but top-most BeginMenu() will bypass that limitation.
         ImGuiWindowFlags window_flags = ImGuiWindowFlags_ChildMenu | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoNavFocus;
-        if (window->Flags & ImGuiWindowFlags_ChildMenu)
+        if (window->Flags & ImGuiWindowFlags_ChildMenu) {
             window_flags |= ImGuiWindowFlags_ChildWindow;
+        }
 
         // If a menu with same the ID was already submitted, we will append to it, matching the behavior of Begin().
         // We are relying on a O(N) search - so O(N log N) over the frame - which seems like the most efficient for the expected small amount of BeginMenu() calls per frame.
@@ -178,16 +184,18 @@ namespace ImGui {
         // Odd hack to allow hovering across menus of a same menu-set (otherwise we wouldn't be able to hover parent without always being a Child window)
         // This is only done for items for the menu set and not the full parent window.
         const bool menuset_is_open = IsRootOfOpenMenuSet();
-        if (menuset_is_open)
+        if (menuset_is_open) {
             PushItemFlag(ImGuiItemFlags_NoWindowHoverableCheck, true);
+        }
 
         // The reference position stored in popup_pos will be used by Begin() to find a suitable position for the child menu,
         // However the final position is going to be different! It is chosen by FindBestWindowPosForPopup().
         // e.g. Menus tend to overlap each other horizontally to amplify relative Z-ordering.
         ImVec2 popup_pos, pos = window->DC.CursorPos;
         PushID(label);
-        if (!enabled)
+        if (!enabled) {
             BeginDisabled();
+        }
         const ImGuiMenuColumns* offsets = &window->DC.MenuColumns;
         bool pressed;
 
@@ -212,9 +220,7 @@ namespace ImGui {
             pressed = ButtonBehavior(bb, id, &hovered, &held, selectable_flags);
 
             if (hovered) {
-                const ImU32 col = GetColorU32((held && hovered) ? ImGuiCol_HeaderActive
-                        : hovered                               ? ImGuiCol_HeaderHovered
-                                                                : ImGuiCol_Header);
+                const ImU32 col = GetColorU32(ImGuiCol_MenuBarBg);
                 RenderNavHighlight(bb, id);
                 RenderFrame(bb.Min, bb.Max, col, true, style.FrameRounding);
             }
@@ -242,9 +248,7 @@ namespace ImGui {
             pressed = ButtonBehavior(bb, id, &hovered, &held, selectable_flags | ImGuiSelectableFlags_SpanAvailWidth);
 
             if (hovered) {
-                const ImU32 col = GetColorU32((held && hovered) ? ImGuiCol_HeaderActive
-                        : hovered                               ? ImGuiCol_HeaderHovered
-                                                                : ImGuiCol_Header);
+                const ImU32 col = GetColorU32(ImGuiCol_MenuBarBg);
                 RenderNavHighlight(bb, id);
                 RenderFrame(bb.Min, bb.Max, col, true, style.FrameRounding);
             }
@@ -255,12 +259,14 @@ namespace ImGui {
                 RenderText(bb.Min + style.FramePadding + ImVec2(offsets->OffsetIcon, 0), icon);
             RenderArrow(window->DrawList, bb.Min + style.FramePadding + ImVec2(offsets->OffsetMark, 0), GetColorU32(ImGuiCol_Text), ImGuiDir_Right);
         }
-        if (!enabled)
+        if (!enabled) {
             EndDisabled();
+        }
 
         const bool hovered = (g.HoveredId == id) && enabled && !g.NavHighlightItemUnderNav;
-        if (menuset_is_open)
+        if (menuset_is_open) {
             PopItemFlag();
+        }
 
         bool want_open = false;
         bool want_open_nav_init = false;
