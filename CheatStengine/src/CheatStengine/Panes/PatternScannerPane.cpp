@@ -106,7 +106,7 @@ void PatternScannerPane::DrawPatternScanResults(PatternScan& patternScan) const
         ImGui::TableHeadersRow();
 
         ImGuiListClipper clipper;
-        clipper.Begin(patternScan.Results.size());
+        clipper.Begin(static_cast<int>(patternScan.Results.size()));
         while (clipper.Step()) {
             for (size_t i = clipper.DisplayStart; i < clipper.DisplayEnd; i++) {
                 PatternScan::Result& result = patternScan.Results[i];

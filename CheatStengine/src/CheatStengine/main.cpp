@@ -125,7 +125,6 @@ public:
 
 Application* CreateApplication()
 {
-
     return new CheatStengine();
 }
 

@@ -5,8 +5,7 @@ include(vendor/icon_font_cpp_headers.cmake)
 #include(vendor/imgui_hex_editor.cmake)
 
 file(GLOB_RECURSE SOURCE_FILES src/*.cpp)
-add_executable(${PROJECT_NAME} ${SOURCE_FILES}
-        src/CheatStengine/Tools/PatternScanner.h)
+add_executable(${PROJECT_NAME} ${SOURCE_FILES})
 
 if (WIN32)
     add_definitions(-DNOMINMAX)
