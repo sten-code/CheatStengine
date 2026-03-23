@@ -11,7 +11,7 @@ features for reverse engineering and game hacking.
 ## Preview
 
 <p align="center">
-    <img src="https://raw.githubusercontent.com/sten-code/CheatStengine/master/Images/preview.png" width="300"/>
+    <img src="https://raw.githubusercontent.com/sten-code/CheatStengine/master/Images/preview.png" width="600"/>
 </p>
 
 ## Compiling from Source
