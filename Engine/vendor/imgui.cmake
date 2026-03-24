@@ -5,7 +5,7 @@ if (NOT EXISTS ${IMGUI_DIR})
     FetchContent_Declare(
             imgui
             GIT_REPOSITORY https://github.com/ocornut/imgui.git
-            GIT_TAG v1.92.3-docking
+            GIT_TAG v1.92.6-docking
             SOURCE_DIR ${IMGUI_DIR}
     )
     FetchContent_MakeAvailable(imgui)

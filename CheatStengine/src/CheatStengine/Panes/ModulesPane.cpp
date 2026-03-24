@@ -55,6 +55,7 @@ void ModulesPane::Draw(double deltaTime)
         }
 
         if (ImGui::BeginPopup(entry.szModule)) {
+            m_SelectedIndex = i;
             if (ImGui::RoundedMenuItem("Copy Name")) {
                 ImGui::SetClipboardText(entry.szModule);
             }

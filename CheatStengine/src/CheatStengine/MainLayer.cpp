@@ -88,29 +88,11 @@ void MainLayer::OnImGuiRenderDock()
     }
 
     m_ModalManager.RenderModals();
-
-    // m_ModulesPane.Draw();
-    // m_DisassemblyPane.Draw();
-    // m_MemoryScannerPane.Draw();
-    // m_MemoryViewerPane.Draw();
-    // m_WatchPane.Draw();
-
-    // ImGui::Begin("Debug");
-    // ImGui::Text("FPS: %.1f", fps);
-    // ImGui::Text("Delta Time: %.3f ms", deltaTime * 1000.0);
-    // ImGui::End();
 }
 
 void MainLayer::OnEvent(Event& event)
 {
 }
-
-// BOOL CALLBACK EnumWindowsProc(HWND hwnd, LPARAM lParam)
-// {
-//     char title[256];
-//     GetWindowTextA(hwnd, title, sizeof(title));
-//     return TRUE;
-// }
 
 void MainLayer::OpenProcessModal(const std::string& name, const std::any& payload)
 {
