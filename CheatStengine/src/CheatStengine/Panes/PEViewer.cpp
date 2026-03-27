@@ -84,6 +84,11 @@ void PEViewer::DrawTabBar()
             ImGui::EndTabItem();
         }
 
+        if (ImGui::BeginTabItem("Sections")) {
+            DrawSectionsTab();
+            ImGui::EndTabItem();
+        }
+
         ImGui::EndTabBar();
     }
 }
@@ -582,20 +587,14 @@ void PEViewer::DrawDataDirectoriesTab()
         numberOfRvaAndSizes = ntHeaders64.OptionalHeader.NumberOfRvaAndSizes;
     }
 
-    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2 { 0.0f, 0.0f });
-    ImGui::BeginChild("PEViewerDataDirectoriesTab", ImVec2(0, 0), true, ImGuiWindowFlags_HorizontalScrollbar);
-    ImGui::PopStyleVar();
+    ImGui::BeginChild("PEViewerDataDirectoriesTab", ImVec2(0, 0), false, ImGuiWindowFlags_HorizontalScrollbar);
 
-    ImGui::PushStyleVar(ImGuiStyleVar_CellPadding, ImVec2 { 0.0f, 0.0f });
-    bool render = ImGui::BeginTable("DataDirectoriesSplit", 2, ImGuiTableFlags_Resizable | ImGuiTableFlags_BordersV);
-    ImGui::PopStyleVar();
-    if (render) {
+    if (ImGui::BeginTable("DataDirectoriesSplit", 2, ImGuiTableFlags_Resizable | ImGuiTableFlags_BordersV)) {
         ImGui::TableSetupColumn("Directory List", ImGuiTableColumnFlags_WidthFixed, 250.0f);
         ImGui::TableSetupColumn("Directory Details", ImGuiTableColumnFlags_WidthStretch);
         ImGui::TableHeadersRow();
 
         ImGui::TableNextRow();
-
         ImGui::TableSetColumnIndex(0);
         DrawDataDirectories(dataDirectories);
 
@@ -629,7 +628,7 @@ void PEViewer::DrawDirectoryDetails(const IMAGE_DATA_DIRECTORY& dir, DWORD index
     uintptr_t baseAddress = reinterpret_cast<uintptr_t>(entry.modBaseAddr);
     uintptr_t directoryAddress = baseAddress + dir.VirtualAddress;
 
-    ImGui::BeginChild("DirectoryDetails", ImVec2(0, 0), true);
+    ImGui::BeginChild("DirectoryDetails", ImVec2(0, 0), false);
 
     ImGui::Text("Directory Information");
     ImGui::Separator();
@@ -739,34 +738,31 @@ void PEViewer::DrawExportDirectory(uintptr_t baseAddress, const IMAGE_DATA_DIREC
     ImGui::TableSetupColumn("Field", ImGuiTableColumnFlags_WidthFixed, 200.0f);
     ImGui::TableSetupColumn("Value", ImGuiTableColumnFlags_WidthStretch);
 
-#define ADD_EXPORT_FIELD(field)    \
+#define DRAW_EXPORT_FIELD(field)    \
     ImGui::TableNextRow();         \
     ImGui::TableSetColumnIndex(0); \
     ImGui::Text(#field);           \
     ImGui::TableSetColumnIndex(1); \
     ImGui::Text("0x%08X", exportDir.field);
 
-    ADD_EXPORT_FIELD(Characteristics);
-    ADD_EXPORT_FIELD(TimeDateStamp);
-    ADD_EXPORT_FIELD(MajorVersion);
-    ADD_EXPORT_FIELD(MinorVersion);
-    ADD_EXPORT_FIELD(Name);
-    ADD_EXPORT_FIELD(Base);
-    ADD_EXPORT_FIELD(NumberOfFunctions);
-    ADD_EXPORT_FIELD(NumberOfNames);
-    ADD_EXPORT_FIELD(AddressOfFunctions);
-    ADD_EXPORT_FIELD(AddressOfNames);
-    ADD_EXPORT_FIELD(AddressOfNameOrdinals);
+    DRAW_EXPORT_FIELD(Characteristics);
+    DRAW_EXPORT_FIELD(TimeDateStamp);
+    DRAW_EXPORT_FIELD(MajorVersion);
+    DRAW_EXPORT_FIELD(MinorVersion);
+    DRAW_EXPORT_FIELD(Name);
+    DRAW_EXPORT_FIELD(Base);
+    DRAW_EXPORT_FIELD(NumberOfFunctions);
+    DRAW_EXPORT_FIELD(NumberOfNames);
+    DRAW_EXPORT_FIELD(AddressOfFunctions);
+    DRAW_EXPORT_FIELD(AddressOfNames);
+    DRAW_EXPORT_FIELD(AddressOfNameOrdinals);
 
     ImGui::EndTable();
 
-    // Show exported functions
     if (exportDir.NumberOfFunctions > 0) {
         ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 10);
         ImGui::Text("Exported Functions");
         ImGui::Separator();
-
-        ImGui::BeginChild("ExportedFunctions", ImVec2(0, 200), true);
 
         uintptr_t functionsAddr = baseAddress + exportDir.AddressOfFunctions;
         uintptr_t namesAddr = baseAddress + exportDir.AddressOfNames;
@@ -776,8 +772,7 @@ void PEViewer::DrawExportDirectory(uintptr_t baseAddress, const IMAGE_DATA_DIREC
         ImGuiListClipper clipper;
         clipper.Begin(count);
         while (clipper.Step()) {
-            for (int ii = clipper.DisplayStart; ii < clipper.DisplayEnd; ++ii) {
-                DWORD i = static_cast<DWORD>(ii);
+            for (DWORD i = clipper.DisplayStart; i < clipper.DisplayEnd; ++i) {
                 DWORD nameRVA = m_State.Process.Read<DWORD>(namesAddr + i * sizeof(DWORD));
                 WORD ordinal = m_State.Process.Read<WORD>(ordinalsAddr + i * sizeof(WORD));
                 DWORD functionRVA = m_State.Process.Read<DWORD>(functionsAddr + ordinal * sizeof(DWORD));
@@ -788,8 +783,6 @@ void PEViewer::DrawExportDirectory(uintptr_t baseAddress, const IMAGE_DATA_DIREC
                     functionName.c_str(), ordinal + exportDir.Base, functionRVA);
             }
         }
-
-        ImGui::EndChild();
     }
 }
 
@@ -799,8 +792,6 @@ void PEViewer::DrawImportDirectory(uintptr_t baseAddress, const IMAGE_DATA_DIREC
 
     ImGui::Text("Import Directory");
     ImGui::Separator();
-
-    ImGui::BeginChild("ImportedModules", ImVec2(0, 0), true);
 
     DWORD index = 0;
     while (true) {
@@ -837,11 +828,8 @@ void PEViewer::DrawImportDirectory(uintptr_t baseAddress, const IMAGE_DATA_DIREC
         }
 
         ImGui::Unindent();
-        ImGui::Separator();
         index++;
     }
-
-    ImGui::EndChild();
 }
 
 void PEViewer::DrawResourceDirectory(uintptr_t baseAddress, const IMAGE_DATA_DIRECTORY& dir)
@@ -860,8 +848,6 @@ void PEViewer::DrawResourceDirectory(uintptr_t baseAddress, const IMAGE_DATA_DIR
 
     IMAGE_RESOURCE_DIRECTORY rootDir = m_State.Process.Read<IMAGE_RESOURCE_DIRECTORY>(resourceAddr);
 
-    ImGui::BeginChild("ResourceTree", ImVec2(0, 200), true);
-
     for (DWORD i = 0; i < rootDir.NumberOfNamedEntries + rootDir.NumberOfIdEntries; i++) {
         IMAGE_RESOURCE_DIRECTORY_ENTRY entry = m_State.Process.Read<IMAGE_RESOURCE_DIRECTORY_ENTRY>(
             resourceAddr + sizeof(IMAGE_RESOURCE_DIRECTORY) + i * sizeof(IMAGE_RESOURCE_DIRECTORY_ENTRY));
@@ -876,8 +862,6 @@ void PEViewer::DrawResourceDirectory(uintptr_t baseAddress, const IMAGE_DATA_DIR
             ImGui::Text("ID: %d", entry.Id);
         }
     }
-
-    ImGui::EndChild();
 }
 
 void PEViewer::DrawDebugDirectory(uintptr_t baseAddress, const IMAGE_DATA_DIRECTORY& dir)
@@ -888,8 +872,6 @@ void PEViewer::DrawDebugDirectory(uintptr_t baseAddress, const IMAGE_DATA_DIRECT
     ImGui::Text("Debug Directory");
     ImGui::Separator();
     ImGui::Text("Number of debug entries: %d", numEntries);
-
-    ImGui::BeginChild("DebugEntries", ImVec2(0, 0), true);
 
     for (DWORD i = 0; i < numEntries; i++) {
         IMAGE_DEBUG_DIRECTORY debugDir = m_State.Process.Read<IMAGE_DEBUG_DIRECTORY>(
@@ -931,10 +913,7 @@ void PEViewer::DrawDebugDirectory(uintptr_t baseAddress, const IMAGE_DATA_DIRECT
         }
 
         ImGui::Unindent();
-        ImGui::Separator();
     }
-
-    ImGui::EndChild();
 }
 
 void PEViewer::DrawTLSDirectory(uintptr_t baseAddress, const IMAGE_DATA_DIRECTORY& dir)
@@ -944,52 +923,226 @@ void PEViewer::DrawTLSDirectory(uintptr_t baseAddress, const IMAGE_DATA_DIRECTOR
     ImGui::Text("TLS Directory");
     ImGui::Separator();
 
-    bool is64Bit = (sizeof(uintptr_t) == 8);
+    IMAGE_TLS_DIRECTORY64 tlsDir = m_State.Process.Read<IMAGE_TLS_DIRECTORY64>(tlsAddr);
 
-    if (is64Bit) {
-        IMAGE_TLS_DIRECTORY64 tlsDir = m_State.Process.Read<IMAGE_TLS_DIRECTORY64>(tlsAddr);
+    ImGui::BeginTable("TLSInfo64", 2, ImGuiTableFlags_Resizable);
+    ImGui::TableSetupColumn("Field", ImGuiTableColumnFlags_WidthFixed, 200.0f);
+    ImGui::TableSetupColumn("Value", ImGuiTableColumnFlags_WidthStretch);
 
-        ImGui::BeginTable("TLSInfo64", 2, ImGuiTableFlags_Resizable);
-        ImGui::TableSetupColumn("Field", ImGuiTableColumnFlags_WidthFixed, 200.0f);
-        ImGui::TableSetupColumn("Value", ImGuiTableColumnFlags_WidthStretch);
-
-#define ADD_TLS64_FIELD(field)     \
+#define DRAW_TLS_FIELD(field)       \
     ImGui::TableNextRow();         \
     ImGui::TableSetColumnIndex(0); \
     ImGui::Text(#field);           \
     ImGui::TableSetColumnIndex(1); \
     ImGui::Text("0x%016llX", tlsDir.field);
 
-        ADD_TLS64_FIELD(StartAddressOfRawData);
-        ADD_TLS64_FIELD(EndAddressOfRawData);
-        ADD_TLS64_FIELD(AddressOfIndex);
-        ADD_TLS64_FIELD(AddressOfCallBacks);
-        ADD_TLS64_FIELD(SizeOfZeroFill);
+    DRAW_TLS_FIELD(StartAddressOfRawData);
+    DRAW_TLS_FIELD(EndAddressOfRawData);
+    DRAW_TLS_FIELD(AddressOfIndex);
+    DRAW_TLS_FIELD(AddressOfCallBacks);
+    DRAW_TLS_FIELD(SizeOfZeroFill);
 
-        ImGui::EndTable();
+    ImGui::EndTable();
+}
+
+void PEViewer::DrawSectionsTab()
+{
+    const MODULEENTRY32& entry = m_State.Modules[m_SelectedIndex];
+    IMAGE_DOS_HEADER dosHeader = m_State.Process.Read<IMAGE_DOS_HEADER>(reinterpret_cast<uintptr_t>(entry.modBaseAddr));
+    uintptr_t ntAddr = reinterpret_cast<uintptr_t>(entry.modBaseAddr) + dosHeader.e_lfanew;
+
+    WORD optionalMagic = m_State.Process.Read<WORD>(ntAddr + sizeof(DWORD) + sizeof(IMAGE_FILE_HEADER));
+    bool is32 = (optionalMagic == IMAGE_NT_OPTIONAL_HDR32_MAGIC);
+
+    IMAGE_NT_HEADERS32 ntHeaders32 {};
+    IMAGE_NT_HEADERS64 ntHeaders64 {};
+    IMAGE_FILE_HEADER fileHeader;
+    uintptr_t sectionStart = 0;
+    uintptr_t imageBase = 0;
+
+    if (is32) {
+        ntHeaders32 = m_State.Process.Read<IMAGE_NT_HEADERS32>(ntAddr);
+        fileHeader = ntHeaders32.FileHeader;
+        sectionStart = ntAddr + sizeof(DWORD) + sizeof(IMAGE_FILE_HEADER) + ntHeaders32.FileHeader.SizeOfOptionalHeader;
+        imageBase = ntHeaders32.OptionalHeader.ImageBase;
     } else {
-        IMAGE_TLS_DIRECTORY32 tlsDir = m_State.Process.Read<IMAGE_TLS_DIRECTORY32>(tlsAddr);
+        ntHeaders64 = m_State.Process.Read<IMAGE_NT_HEADERS64>(ntAddr);
+        fileHeader = ntHeaders64.FileHeader;
+        sectionStart = ntAddr + sizeof(DWORD) + sizeof(IMAGE_FILE_HEADER) + ntHeaders64.FileHeader.SizeOfOptionalHeader;
+        imageBase = ntHeaders64.OptionalHeader.ImageBase;
+    }
 
-        ImGui::BeginTable("TLSInfo32", 2, ImGuiTableFlags_Resizable);
-        ImGui::TableSetupColumn("Field", ImGuiTableColumnFlags_WidthFixed, 200.0f);
-        ImGui::TableSetupColumn("Value", ImGuiTableColumnFlags_WidthStretch);
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2 { 0.0f, 0.0f });
+    ImGui::BeginChild("PEViewerSectionsTab", ImVec2(0, 0), true, ImGuiWindowFlags_HorizontalScrollbar);
+    ImGui::PopStyleVar();
 
-#define ADD_TLS32_FIELD(field)     \
-    ImGui::TableNextRow();         \
-    ImGui::TableSetColumnIndex(0); \
-    ImGui::Text(#field);           \
-    ImGui::TableSetColumnIndex(1); \
-    ImGui::Text("0x%08X", tlsDir.field);
+    if (ImGui::BeginTable("SectionsSplit", 2, ImGuiTableFlags_Resizable | ImGuiTableFlags_BordersV)) {
+        ImGui::TableSetupColumn("Section List", ImGuiTableColumnFlags_WidthFixed, 300.0f);
+        ImGui::TableSetupColumn("Section Details", ImGuiTableColumnFlags_WidthStretch);
+        ImGui::TableHeadersRow();
 
-        ADD_TLS32_FIELD(StartAddressOfRawData);
-        ADD_TLS32_FIELD(EndAddressOfRawData);
-        ADD_TLS32_FIELD(AddressOfIndex);
-        ADD_TLS32_FIELD(AddressOfCallBacks);
-        ADD_TLS32_FIELD(SizeOfZeroFill);
+        ImGui::TableNextRow();
+        ImGui::TableSetColumnIndex(0);
+
+        ImGui::PushItemWidth(-1);
+        ImGui::InputTextWithHint("##SectionSearch", "Search sections...", &m_SectionSearchQuery);
+        ImGui::PopItemWidth();
+
+        ImGui::BeginChild("SectionList", ImVec2(0, 0), false);
+
+        std::string queryLower = m_SectionSearchQuery;
+        std::ranges::transform(queryLower, queryLower.begin(), ::tolower);
+
+        std::vector<IMAGE_SECTION_HEADER> sections;
+        for (WORD i = 0; i < fileHeader.NumberOfSections; i++) {
+            IMAGE_SECTION_HEADER section = m_State.Process.Read<IMAGE_SECTION_HEADER>(
+                sectionStart + i * sizeof(IMAGE_SECTION_HEADER));
+            sections.push_back(section);
+        }
+
+        for (size_t i = 0; i < sections.size(); i++) {
+            const IMAGE_SECTION_HEADER& section = sections[i];
+            char sectionName[9] = {};
+            memcpy(sectionName, section.Name, 8);
+
+            std::string nameLower = sectionName;
+            std::ranges::transform(nameLower, nameLower.begin(), ::tolower);
+
+            if (!queryLower.empty() && nameLower.find(queryLower) == std::string::npos) {
+                continue;
+            }
+
+            bool isSelected = (m_SelectedSection == static_cast<int>(i));
+
+            if (section.Characteristics & IMAGE_SCN_MEM_EXECUTE) {
+                ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.8f, 0.6f, 0.2f, 1.0f)); // Orange for executable
+            } else if (section.Characteristics & IMAGE_SCN_MEM_WRITE) {
+                ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.8f, 0.3f, 0.3f, 1.0f)); // Red for writable
+            } else if (section.Characteristics & IMAGE_SCN_MEM_READ) {
+                ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.3f, 0.7f, 0.3f, 1.0f)); // Green for readable
+            }
+
+            if (ImGui::Selectable(std::format("{}##{}", sectionName, i).c_str(), isSelected)) {
+                m_SelectedSection = static_cast<int>(i);
+            }
+
+            ImGui::SameLine();
+            ImGui::TextDisabled(" (0x%08X)", section.Misc.VirtualSize);
+
+            if (section.Characteristics & (IMAGE_SCN_MEM_EXECUTE | IMAGE_SCN_MEM_WRITE | IMAGE_SCN_MEM_READ)) {
+                ImGui::PopStyleColor();
+            }
+        }
+
+        ImGui::EndChild();
+
+        ImGui::TableSetColumnIndex(1);
+        if (m_SelectedSection >= 0 && m_SelectedSection < static_cast<int>(sections.size())) {
+            const IMAGE_SECTION_HEADER& selectedSection = sections[m_SelectedSection];
+            uintptr_t sectionBase = reinterpret_cast<uintptr_t>(entry.modBaseAddr) + selectedSection.VirtualAddress;
+            DrawSectionDetails(selectedSection, sectionBase, imageBase);
+        } else {
+            ImGui::BeginChild("SectionEmptyState");
+            ImGui::Text("Select a section from the left to view its details.");
+            ImGui::EndChild();
+        }
 
         ImGui::EndTable();
     }
 
-    ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 10);
-    ImGui::Text("Note: TLS callbacks are executed before the entry point.");
+    ImGui::EndChild();
+}
+
+void PEViewer::DrawSectionDetails(const IMAGE_SECTION_HEADER& section, uintptr_t sectionBase, uintptr_t imageBase)
+{
+    char sectionName[9] = {};
+    memcpy(sectionName, section.Name, 8);
+
+    ImGui::BeginChild("SectionDetails", ImVec2(0, 0), false, ImGuiWindowFlags_HorizontalScrollbar);
+
+    static const struct {
+        DWORD flag;
+        const char* name;
+        const char* description;
+    } sectionFlags[] = {
+        { IMAGE_SCN_TYPE_NO_PAD, "TYPE_NO_PAD", "Section should not be padded" },
+        { IMAGE_SCN_CNT_CODE, "CNT_CODE", "Contains executable code" },
+        { IMAGE_SCN_CNT_INITIALIZED_DATA, "CNT_INITIALIZED_DATA", "Contains initialized data" },
+        { IMAGE_SCN_CNT_UNINITIALIZED_DATA, "CNT_UNINITIALIZED_DATA", "Contains uninitialized data" },
+        { IMAGE_SCN_LNK_OTHER, "LNK_OTHER", "Reserved for future use" },
+        { IMAGE_SCN_LNK_INFO, "LNK_INFO", "Contains comments or other information" },
+        { IMAGE_SCN_LNK_REMOVE, "LNK_REMOVE", "Will not become part of image" },
+        { IMAGE_SCN_LNK_COMDAT, "LNK_COMDAT", "Contains COMDAT data" },
+        { IMAGE_SCN_GPREL, "GPREL", "Contains data referenced through global pointer" },
+        { IMAGE_SCN_MEM_PURGEABLE, "MEM_PURGEABLE", "Section is purgeable" },
+        { IMAGE_SCN_MEM_16BIT, "MEM_16BIT", "Contains 16-bit data" },
+        { IMAGE_SCN_MEM_LOCKED, "MEM_LOCKED", "Section is locked" },
+        { IMAGE_SCN_MEM_PRELOAD, "MEM_PRELOAD", "Section is preloaded" },
+        { IMAGE_SCN_ALIGN_1BYTES, "ALIGN_1BYTES", "Align on 1-byte boundary" },
+        { IMAGE_SCN_ALIGN_2BYTES, "ALIGN_2BYTES", "Align on 2-byte boundary" },
+        { IMAGE_SCN_ALIGN_4BYTES, "ALIGN_4BYTES", "Align on 4-byte boundary" },
+        { IMAGE_SCN_ALIGN_8BYTES, "ALIGN_8BYTES", "Align on 8-byte boundary" },
+        { IMAGE_SCN_ALIGN_16BYTES, "ALIGN_16BYTES", "Align on 16-byte boundary" },
+        { IMAGE_SCN_ALIGN_32BYTES, "ALIGN_32BYTES", "Align on 32-byte boundary" },
+        { IMAGE_SCN_ALIGN_64BYTES, "ALIGN_64BYTES", "Align on 64-byte boundary" },
+        { IMAGE_SCN_ALIGN_128BYTES, "ALIGN_128BYTES", "Align on 128-byte boundary" },
+        { IMAGE_SCN_ALIGN_256BYTES, "ALIGN_256BYTES", "Align on 256-byte boundary" },
+        { IMAGE_SCN_ALIGN_512BYTES, "ALIGN_512BYTES", "Align on 512-byte boundary" },
+        { IMAGE_SCN_ALIGN_1024BYTES, "ALIGN_1024BYTES", "Align on 1024-byte boundary" },
+        { IMAGE_SCN_ALIGN_2048BYTES, "ALIGN_2048BYTES", "Align on 2048-byte boundary" },
+        { IMAGE_SCN_ALIGN_4096BYTES, "ALIGN_4096BYTES", "Align on 4096-byte boundary" },
+        { IMAGE_SCN_ALIGN_8192BYTES, "ALIGN_8192BYTES", "Align on 8192-byte boundary" },
+        { IMAGE_SCN_LNK_NRELOC_OVFL, "LNK_NRELOC_OVFL", "Extended relocations" },
+        { IMAGE_SCN_MEM_DISCARDABLE, "MEM_DISCARDABLE", "Section can be discarded" },
+        { IMAGE_SCN_MEM_NOT_CACHED, "MEM_NOT_CACHED", "Section cannot be cached" },
+        { IMAGE_SCN_MEM_NOT_PAGED, "MEM_NOT_PAGED", "Section is not pageable" },
+        { IMAGE_SCN_MEM_SHARED, "MEM_SHARED", "Section is shareable" },
+        { IMAGE_SCN_MEM_EXECUTE, "MEM_EXECUTE", "Section is executable" },
+        { IMAGE_SCN_MEM_READ, "MEM_READ", "Section is readable" },
+        { IMAGE_SCN_MEM_WRITE, "MEM_WRITE", "Section is writable" }
+    };
+
+    if (ImGui::BeginTable("SectionInfo", 2, ImGuiTableFlags_Resizable)) {
+#define DRAW_SECTION_FIELD(name, value, format) \
+    ImGui::TableNextRow();                     \
+    ImGui::TableSetColumnIndex(0);             \
+    ImGui::Text("%s", name);                   \
+    ImGui::TableSetColumnIndex(1);             \
+    ImGui::Text(format, value);
+
+        DRAW_SECTION_FIELD("Name", sectionName, "%s");
+        DRAW_SECTION_FIELD("Virtual Size", section.Misc.VirtualSize, "0x%08X");
+        DRAW_SECTION_FIELD("Virtual Address (RVA)", section.VirtualAddress, "0x%08X");
+        DRAW_SECTION_FIELD("Virtual Address (VA)", imageBase + section.VirtualAddress, "0x%012llX");
+        DRAW_SECTION_FIELD("Size of Raw Data", section.SizeOfRawData, "0x%08X");
+        DRAW_SECTION_FIELD("Pointer to Raw Data", section.PointerToRawData, "0x%08X");
+        DRAW_SECTION_FIELD("Pointer to Relocations", section.PointerToRelocations, "0x%08X");
+        DRAW_SECTION_FIELD("Pointer to Line Numbers", section.PointerToLinenumbers, "0x%08X");
+        DRAW_SECTION_FIELD("Number of Relocations", section.NumberOfRelocations, "%d");
+        DRAW_SECTION_FIELD("Number of Line Numbers", section.NumberOfLinenumbers, "%d");
+
+        ImGui::TableNextRow();
+        ImGui::TableSetColumnIndex(0);
+        ImGui::Text("Characteristics");
+        ImGui::TableSetColumnIndex(1);
+
+        std::string charStr;
+        for (const auto& flag : sectionFlags) {
+            if (section.Characteristics & flag.flag) {
+                if (!charStr.empty())
+                    charStr += ", ";
+                charStr += flag.name;
+            }
+        }
+
+        ImGui::TextWrapped("0x%08X", section.Characteristics);
+        if (!charStr.empty()) {
+            ImGui::SameLine();
+            ImGui::TextDisabled("(%s)", charStr.c_str());
+        }
+
+        ImGui::EndTable();
+    }
+
+    ImGui::EndChild();
 }
