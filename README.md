@@ -32,13 +32,14 @@ cmake --build build --config Release
 - [x] Module List
 - [x] PE Viewer
 - [ ] Process Dumper
+- [ ] String Scanner/Viewer
 - [ ] Code cave scanner
 - [ ] Code injection
 - [ ] Syscall Tracer
 - [ ] Lua scripting
-- [ ] Debugger
 - [ ] Pointer Scanner
 - [ ] Memory Viewer
+- [ ] Debugger
 - [ ] Thread Explorer
 - [ ] Handle Viewer
 - [ ] Plugin System

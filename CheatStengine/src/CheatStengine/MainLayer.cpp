@@ -36,12 +36,12 @@ MainLayer::MainLayer(Window& window)
     AddPane<PEViewer>(m_State);
     StructDissectPane& structDissectPane = AddPane<StructDissectPane>(m_State, m_ModalManager, m_KeybindManager);
 
-    // AddressEvaluator::Result result = AddressEvaluator::Evaluate("robloxplayerbeta.exe+0x7D02728", m_State.Process);
+    // AddressEvaluator::Result result = AddressEvaluator::Evaluate("robloxplayerbeta.exe+0x795A0D8", m_State.Process);
     // if (!result.IsError()) {
     //     structDissectPane.AddDissection("FakeDataModel", result.Value);
     // }
 
-    AddressEvaluator::Result result = AddressEvaluator::Evaluate("robloxplayerbeta.exe+0x82766C8", m_State.Process);
+    AddressEvaluator::Result result = AddressEvaluator::Evaluate("robloxplayerbeta.exe+0x7A08710", m_State.Process);
     if (!result.IsError()) {
         structDissectPane.AddDissection("RawScheduler", result.Value);
     }
