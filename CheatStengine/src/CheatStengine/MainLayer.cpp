@@ -6,6 +6,7 @@
 #include <CheatStengine/Panes/DisassemblyPane.h>
 #include <CheatStengine/Panes/MemoryScannerPane.h>
 #include <CheatStengine/Panes/ModulesPane.h>
+#include <CheatStengine/Panes/PEViewer.h>
 #include <CheatStengine/Panes/PatternScannerPane.h>
 #include <CheatStengine/Panes/StructDissectPane.h>
 #include <CheatStengine/Panes/WatchPane.h>
@@ -32,6 +33,7 @@ MainLayer::MainLayer(Window& window)
     AddPane<DisassemblyPane>(m_State, m_ModalManager, m_KeybindManager);
     AddPane<PatternScannerPane>(m_State, *this);
     AddPane<DebugPane>(m_State);
+    AddPane<PEViewer>(m_State);
     StructDissectPane& structDissectPane = AddPane<StructDissectPane>(m_State, m_ModalManager, m_KeybindManager);
 
     // AddressEvaluator::Result result = AddressEvaluator::Evaluate("robloxplayerbeta.exe+0x7D02728", m_State.Process);

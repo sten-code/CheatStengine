@@ -30,9 +30,11 @@ cmake --build build --config Release
 - [x] Memory Scanner
 - [x] Address Watcher
 - [x] Module List
-- [ ] PE Explorer
+- [x] PE Viewer
+- [ ] Process Dumper
 - [ ] Code cave scanner
 - [ ] Code injection
+- [ ] Syscall Tracer
 - [ ] Lua scripting
 - [ ] Debugger
 - [ ] Pointer Scanner
@@ -40,5 +42,3 @@ cmake --build build --config Release
 - [ ] Thread Explorer
 - [ ] Handle Viewer
 - [ ] Plugin System
-- [ ] Syscall Tracer
-- [ ] Process Dumper
