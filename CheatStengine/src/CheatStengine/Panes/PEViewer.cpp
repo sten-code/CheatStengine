@@ -66,7 +66,7 @@ void PEViewer::DrawModuleList()
 void PEViewer::DrawTabBar()
 {
     if (m_SelectedIndex == -1) {
-        ImGui::BeginChild("PEViewerEmptyState", ImVec2(0, 0), true);
+        ImGui::BeginChild("PEViewerEmptyState");
         ImGui::Text("Select a module to view its PE headers.");
         ImGui::EndChild();
         return;
@@ -600,7 +600,7 @@ void PEViewer::DrawDataDirectoriesTab()
 
         ImGui::TableSetColumnIndex(1);
         if (m_SelectedDirectory >= 0 && m_SelectedDirectory < numberOfRvaAndSizes) {
-            DrawDirectoryDetails(dataDirectories[m_SelectedDirectory], m_SelectedDirectory);
+            DrawDirectoryDetails(dataDirectories[m_SelectedDirectory], m_SelectedDirectory, is32);
         } else {
             ImGui::BeginChild("DataDirectoryEmptyState");
             ImGui::Text("Select a data directory from the left to view its contents.");
@@ -613,7 +613,7 @@ void PEViewer::DrawDataDirectoriesTab()
     ImGui::EndChild();
 }
 
-void PEViewer::DrawDirectoryDetails(const IMAGE_DATA_DIRECTORY& dir, DWORD index)
+void PEViewer::DrawDirectoryDetails(const IMAGE_DATA_DIRECTORY& dir, DWORD index, bool is32)
 {
     if (dir.VirtualAddress == 0 || dir.Size == 0) {
         ImGui::BeginChild("EmptyDirectoryDetails");
@@ -628,7 +628,7 @@ void PEViewer::DrawDirectoryDetails(const IMAGE_DATA_DIRECTORY& dir, DWORD index
     uintptr_t baseAddress = reinterpret_cast<uintptr_t>(entry.modBaseAddr);
     uintptr_t directoryAddress = baseAddress + dir.VirtualAddress;
 
-    ImGui::BeginChild("DirectoryDetails", ImVec2(0, 0), false);
+    ImGui::BeginChild("DirectoryDetails");
 
     ImGui::Text("Directory Information");
     ImGui::Separator();
@@ -675,10 +675,10 @@ void PEViewer::DrawDirectoryDetails(const IMAGE_DATA_DIRECTORY& dir, DWORD index
 
     switch (index) {
         case IMAGE_DIRECTORY_ENTRY_EXPORT: DrawExportDirectory(baseAddress, dir); break;
-        case IMAGE_DIRECTORY_ENTRY_IMPORT: DrawImportDirectory(baseAddress, dir); break;
+        case IMAGE_DIRECTORY_ENTRY_IMPORT: DrawImportDirectory(baseAddress, dir, is32); break;
         case IMAGE_DIRECTORY_ENTRY_RESOURCE: DrawResourceDirectory(baseAddress, dir); break;
         case IMAGE_DIRECTORY_ENTRY_DEBUG: DrawDebugDirectory(baseAddress, dir); break;
-        case IMAGE_DIRECTORY_ENTRY_TLS: DrawTLSDirectory(baseAddress, dir); break;
+        case IMAGE_DIRECTORY_ENTRY_TLS: DrawTLSDirectory(baseAddress, dir, is32); break;
         default: {
             ImGui::Text("Raw Directory Data");
             ImGui::Separator();
@@ -786,7 +786,7 @@ void PEViewer::DrawExportDirectory(uintptr_t baseAddress, const IMAGE_DATA_DIREC
     }
 }
 
-void PEViewer::DrawImportDirectory(uintptr_t baseAddress, const IMAGE_DATA_DIRECTORY& dir)
+void PEViewer::DrawImportDirectory(uintptr_t baseAddress, const IMAGE_DATA_DIRECTORY& dir, bool is32)
 {
     uintptr_t importAddr = baseAddress + dir.VirtualAddress;
 
@@ -805,25 +805,41 @@ void PEViewer::DrawImportDirectory(uintptr_t baseAddress, const IMAGE_DATA_DIREC
         ImGui::Text("Module: %s", moduleName.c_str());
         ImGui::Indent();
 
-        uintptr_t thunkAddr = baseAddress + importDesc.OriginalFirstThunk;
-        if (thunkAddr == baseAddress) {
-            thunkAddr = baseAddress + importDesc.FirstThunk;
-        }
+        uintptr_t thunkAddr = baseAddress + (importDesc.OriginalFirstThunk ? importDesc.OriginalFirstThunk : importDesc.FirstThunk);
 
-        for (DWORD i = 0;; i++) {
-            uintptr_t thunkValue = m_State.Process.Read<uint64_t>(thunkAddr + i * sizeof(uint64_t));
-            if (thunkValue == 0) {
-                break;
+        if (is32) {
+            for (DWORD i = 0;; i++) {
+                uint32_t thunkValue = m_State.Process.Read<uint32_t>(thunkAddr + i * sizeof(uint32_t));
+                if (thunkValue == 0) {
+                    break;
+                }
+
+                if (thunkValue & IMAGE_ORDINAL_FLAG32) {
+                    DWORD ordinal = thunkValue & 0xFFFF;
+                    ImGui::Text("Ordinal: %d (RVA: 0x%08X)", ordinal, thunkValue);
+                } else {
+                    uintptr_t importByNameAddr = baseAddress + thunkValue;
+                    IMAGE_IMPORT_BY_NAME importByName = m_State.Process.Read<IMAGE_IMPORT_BY_NAME>(importByNameAddr);
+                    std::string functionName = m_State.Process.ReadString(importByNameAddr + 2, 128);
+                    ImGui::Text("Function: %s (Hint: %d)", functionName.c_str(), importByName.Hint);
+                }
             }
+        } else {
+            for (DWORD i = 0;; i++) {
+                uint64_t thunkValue = m_State.Process.Read<uint64_t>(thunkAddr + i * sizeof(uint64_t));
+                if (thunkValue == 0) {
+                    break;
+                }
 
-            if (thunkValue & IMAGE_ORDINAL_FLAG) {
-                DWORD ordinal = thunkValue & 0xFFFF;
-                ImGui::Text("Ordinal: %d (RVA: 0x%08X)", ordinal, thunkValue);
-            } else {
-                uintptr_t importByNameAddr = baseAddress + thunkValue;
-                IMAGE_IMPORT_BY_NAME importByName = m_State.Process.Read<IMAGE_IMPORT_BY_NAME>(importByNameAddr);
-                std::string functionName = m_State.Process.ReadString(importByNameAddr + 2, 128);
-                ImGui::Text("Function: %s (Hint: %d)", functionName.c_str(), importByName.Hint);
+                if (thunkValue & IMAGE_ORDINAL_FLAG64) {
+                    DWORD ordinal = static_cast<DWORD>(thunkValue & 0xFFFF);
+                    ImGui::Text("Ordinal: %d (RVA: 0x%016llX)", ordinal, thunkValue);
+                } else {
+                    uintptr_t importByNameAddr = baseAddress + thunkValue;
+                    IMAGE_IMPORT_BY_NAME importByName = m_State.Process.Read<IMAGE_IMPORT_BY_NAME>(importByNameAddr);
+                    std::string functionName = m_State.Process.ReadString(importByNameAddr + 2, 128);
+                    ImGui::Text("Function: %s (Hint: %d)", functionName.c_str(), importByName.Hint);
+                }
             }
         }
 
@@ -839,9 +855,7 @@ void PEViewer::DrawResourceDirectory(uintptr_t baseAddress, const IMAGE_DATA_DIR
     ImGui::Text("Resource Directory");
     ImGui::Separator();
     ImGui::Text("Resource data is present at RVA 0x%08X, size 0x%X", dir.VirtualAddress, dir.Size);
-    ImGui::Text("Use a resource viewer for detailed resource inspection.");
 
-    // Simple resource tree display
     ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 10);
     ImGui::Text("Resource Types:");
     ImGui::Separator();
@@ -853,10 +867,16 @@ void PEViewer::DrawResourceDirectory(uintptr_t baseAddress, const IMAGE_DATA_DIR
             resourceAddr + sizeof(IMAGE_RESOURCE_DIRECTORY) + i * sizeof(IMAGE_RESOURCE_DIRECTORY_ENTRY));
 
         if (entry.NameIsString) {
-            // Named entry
-            IMAGE_RESOURCE_DIR_STRING_U nameStr = m_State.Process.Read<IMAGE_RESOURCE_DIR_STRING_U>(
-                resourceAddr + entry.NameOffset);
-            ImGui::Text("Named: %s", nameStr.NameString);
+            WORD length = m_State.Process.Read<WORD>(resourceAddr + entry.NameOffset);
+            std::vector<wchar_t> rawNameW = m_State.Process.ReadArray<wchar_t>(resourceAddr + entry.NameOffset + offsetof(IMAGE_RESOURCE_DIR_STRING_U, NameString), length);
+            std::wstring wName(rawNameW.begin(), rawNameW.end());
+            int size = WideCharToMultiByte(CP_UTF8, 0, wName.c_str(), -1, nullptr, 0, nullptr, nullptr);
+            std::string name;
+            if (size > 0) {
+                name.resize(size - 1);
+                WideCharToMultiByte(CP_UTF8, 0, wName.c_str(), -1, name.data(), size, nullptr, nullptr);
+            }
+            ImGui::Text("Named: %s", name.c_str());
         } else {
             // ID entry
             ImGui::Text("ID: %d", entry.Id);
@@ -916,33 +936,56 @@ void PEViewer::DrawDebugDirectory(uintptr_t baseAddress, const IMAGE_DATA_DIRECT
     }
 }
 
-void PEViewer::DrawTLSDirectory(uintptr_t baseAddress, const IMAGE_DATA_DIRECTORY& dir)
+void PEViewer::DrawTLSDirectory(uintptr_t baseAddress, const IMAGE_DATA_DIRECTORY& dir, bool is32)
 {
     uintptr_t tlsAddr = baseAddress + dir.VirtualAddress;
 
     ImGui::Text("TLS Directory");
     ImGui::Separator();
 
-    IMAGE_TLS_DIRECTORY64 tlsDir = m_State.Process.Read<IMAGE_TLS_DIRECTORY64>(tlsAddr);
+    if (is32) {
+        IMAGE_TLS_DIRECTORY32 tlsDir = m_State.Process.Read<IMAGE_TLS_DIRECTORY32>(tlsAddr);
 
-    ImGui::BeginTable("TLSInfo64", 2, ImGuiTableFlags_Resizable);
-    ImGui::TableSetupColumn("Field", ImGuiTableColumnFlags_WidthFixed, 200.0f);
-    ImGui::TableSetupColumn("Value", ImGuiTableColumnFlags_WidthStretch);
+        ImGui::BeginTable("TLSInfo32", 2, ImGuiTableFlags_Resizable);
+        ImGui::TableSetupColumn("Field", ImGuiTableColumnFlags_WidthFixed, 200.0f);
+        ImGui::TableSetupColumn("Value", ImGuiTableColumnFlags_WidthStretch);
 
-#define DRAW_TLS_FIELD(field)      \
+#define ADD_TLS32_FIELD(field)     \
     ImGui::TableNextRow();         \
     ImGui::TableSetColumnIndex(0); \
     ImGui::Text(#field);           \
     ImGui::TableSetColumnIndex(1); \
-    ImGui::Text("0x%016llX", tlsDir.field);
+    ImGui::Text("0x%X", tlsDir.field);
 
-    DRAW_TLS_FIELD(StartAddressOfRawData);
-    DRAW_TLS_FIELD(EndAddressOfRawData);
-    DRAW_TLS_FIELD(AddressOfIndex);
-    DRAW_TLS_FIELD(AddressOfCallBacks);
-    DRAW_TLS_FIELD(SizeOfZeroFill);
+        ADD_TLS32_FIELD(StartAddressOfRawData);
+        ADD_TLS32_FIELD(EndAddressOfRawData);
+        ADD_TLS32_FIELD(AddressOfIndex);
+        ADD_TLS32_FIELD(AddressOfCallBacks);
+        ADD_TLS32_FIELD(SizeOfZeroFill);
 
-    ImGui::EndTable();
+        ImGui::EndTable();
+    } else {
+        IMAGE_TLS_DIRECTORY64 tlsDir = m_State.Process.Read<IMAGE_TLS_DIRECTORY64>(tlsAddr);
+
+        ImGui::BeginTable("TLSInfo64", 2, ImGuiTableFlags_Resizable);
+        ImGui::TableSetupColumn("Field", ImGuiTableColumnFlags_WidthFixed, 200.0f);
+        ImGui::TableSetupColumn("Value", ImGuiTableColumnFlags_WidthStretch);
+
+#define ADD_TLS64_FIELD(field)     \
+    ImGui::TableNextRow();         \
+    ImGui::TableSetColumnIndex(0); \
+    ImGui::Text(#field);           \
+    ImGui::TableSetColumnIndex(1); \
+    ImGui::Text("0x%llX", tlsDir.field);
+
+        ADD_TLS64_FIELD(StartAddressOfRawData);
+        ADD_TLS64_FIELD(EndAddressOfRawData);
+        ADD_TLS64_FIELD(AddressOfIndex);
+        ADD_TLS64_FIELD(AddressOfCallBacks);
+        ADD_TLS64_FIELD(SizeOfZeroFill);
+
+        ImGui::EndTable();
+    }
 }
 
 void PEViewer::DrawSectionsTab()
@@ -988,7 +1031,7 @@ void PEViewer::DrawSectionsTab()
         ImGui::InputTextWithHint("##SectionSearch", "Search sections...", &m_SectionSearchQuery);
         ImGui::PopItemWidth();
 
-        ImGui::BeginChild("SectionList", ImVec2(0, 0), false);
+        ImGui::BeginChild("SectionList");
 
         std::string queryLower = m_SectionSearchQuery;
         std::ranges::transform(queryLower, queryLower.begin(), ::tolower);

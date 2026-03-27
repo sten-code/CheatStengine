@@ -16,12 +16,12 @@ private:
     void DrawDataDirectories(const IMAGE_DATA_DIRECTORY* dataDirectories);
 
     void DrawDataDirectoriesTab();
-    void DrawDirectoryDetails(const IMAGE_DATA_DIRECTORY& dir, DWORD index);
+    void DrawDirectoryDetails(const IMAGE_DATA_DIRECTORY& dir, DWORD index, bool is32);
     void DrawExportDirectory(uintptr_t baseAddress, const IMAGE_DATA_DIRECTORY& dir);
-    void DrawImportDirectory(uintptr_t baseAddress, const IMAGE_DATA_DIRECTORY& dir);
+    void DrawImportDirectory(uintptr_t baseAddress, const IMAGE_DATA_DIRECTORY& dir, bool is32);
     void DrawResourceDirectory(uintptr_t baseAddress, const IMAGE_DATA_DIRECTORY& dir);
     void DrawDebugDirectory(uintptr_t baseAddress, const IMAGE_DATA_DIRECTORY& dir);
-    void DrawTLSDirectory(uintptr_t baseAddress, const IMAGE_DATA_DIRECTORY& dir);
+    void DrawTLSDirectory(uintptr_t baseAddress, const IMAGE_DATA_DIRECTORY& dir, bool is32);
 
     void DrawSectionsTab();
     void DrawSectionDetails(const IMAGE_SECTION_HEADER& section, uintptr_t imageBase);
