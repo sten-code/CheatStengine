@@ -10,4 +10,5 @@ public:
 
 private:
     size_t m_SelectedIndex = -1;
+    std::string m_SearchQuery;
 };

@@ -3,6 +3,7 @@
 
 #include <IconsMaterialDesignIcons.h>
 #include <imgui.h>
+#include <imgui_stdlib.h>
 
 #include <CheatStengine/UI/ImGui/Menu.h>
 #include <algorithm>
@@ -23,12 +24,11 @@ void ModulesPane::Draw(double deltaTime)
         ImGui::SetKeyboardFocusHere();
     }
 
-    static char searchQuery[256] = "";
     ImGui::PushItemWidth(-1);
-    ImGui::InputTextWithHint("##Search", "Search modules...", searchQuery, sizeof(searchQuery));
+    ImGui::InputTextWithHint("##Search", "Search modules...", &m_SearchQuery);
     ImGui::PopItemWidth();
 
-    std::string queryLower = searchQuery;
+    std::string queryLower = m_SearchQuery;
     std::ranges::transform(queryLower, queryLower.begin(), ::tolower);
 
     for (size_t i = 0; i < m_State.Modules.size(); ++i) {
