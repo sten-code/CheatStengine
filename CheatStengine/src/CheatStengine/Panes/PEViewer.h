@@ -24,7 +24,7 @@ private:
     void DrawTLSDirectory(uintptr_t baseAddress, const IMAGE_DATA_DIRECTORY& dir);
 
     void DrawSectionsTab();
-    void DrawSectionDetails(const IMAGE_SECTION_HEADER& section, uintptr_t sectionBase, uintptr_t imageBase);
+    void DrawSectionDetails(const IMAGE_SECTION_HEADER& section, uintptr_t imageBase);
 
 private:
     size_t m_SelectedIndex = -1;

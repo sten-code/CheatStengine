@@ -738,7 +738,7 @@ void PEViewer::DrawExportDirectory(uintptr_t baseAddress, const IMAGE_DATA_DIREC
     ImGui::TableSetupColumn("Field", ImGuiTableColumnFlags_WidthFixed, 200.0f);
     ImGui::TableSetupColumn("Value", ImGuiTableColumnFlags_WidthStretch);
 
-#define DRAW_EXPORT_FIELD(field)    \
+#define DRAW_EXPORT_FIELD(field)   \
     ImGui::TableNextRow();         \
     ImGui::TableSetColumnIndex(0); \
     ImGui::Text(#field);           \
@@ -929,7 +929,7 @@ void PEViewer::DrawTLSDirectory(uintptr_t baseAddress, const IMAGE_DATA_DIRECTOR
     ImGui::TableSetupColumn("Field", ImGuiTableColumnFlags_WidthFixed, 200.0f);
     ImGui::TableSetupColumn("Value", ImGuiTableColumnFlags_WidthStretch);
 
-#define DRAW_TLS_FIELD(field)       \
+#define DRAW_TLS_FIELD(field)      \
     ImGui::TableNextRow();         \
     ImGui::TableSetColumnIndex(0); \
     ImGui::Text(#field);           \
@@ -1039,8 +1039,7 @@ void PEViewer::DrawSectionsTab()
         ImGui::TableSetColumnIndex(1);
         if (m_SelectedSection >= 0 && m_SelectedSection < static_cast<int>(sections.size())) {
             const IMAGE_SECTION_HEADER& selectedSection = sections[m_SelectedSection];
-            uintptr_t sectionBase = reinterpret_cast<uintptr_t>(entry.modBaseAddr) + selectedSection.VirtualAddress;
-            DrawSectionDetails(selectedSection, sectionBase, imageBase);
+            DrawSectionDetails(selectedSection, imageBase);
         } else {
             ImGui::BeginChild("SectionEmptyState");
             ImGui::Text("Select a section from the left to view its details.");
@@ -1053,7 +1052,7 @@ void PEViewer::DrawSectionsTab()
     ImGui::EndChild();
 }
 
-void PEViewer::DrawSectionDetails(const IMAGE_SECTION_HEADER& section, uintptr_t sectionBase, uintptr_t imageBase)
+void PEViewer::DrawSectionDetails(const IMAGE_SECTION_HEADER& section, uintptr_t imageBase)
 {
     char sectionName[9] = {};
     memcpy(sectionName, section.Name, 8);
@@ -1104,10 +1103,10 @@ void PEViewer::DrawSectionDetails(const IMAGE_SECTION_HEADER& section, uintptr_t
 
     if (ImGui::BeginTable("SectionInfo", 2, ImGuiTableFlags_Resizable)) {
 #define DRAW_SECTION_FIELD(name, value, format) \
-    ImGui::TableNextRow();                     \
-    ImGui::TableSetColumnIndex(0);             \
-    ImGui::Text("%s", name);                   \
-    ImGui::TableSetColumnIndex(1);             \
+    ImGui::TableNextRow();                      \
+    ImGui::TableSetColumnIndex(0);              \
+    ImGui::Text("%s", name);                    \
+    ImGui::TableSetColumnIndex(1);              \
     ImGui::Text(format, value);
 
         DRAW_SECTION_FIELD("Name", sectionName, "%s");
@@ -1129,8 +1128,9 @@ void PEViewer::DrawSectionDetails(const IMAGE_SECTION_HEADER& section, uintptr_t
         std::string charStr;
         for (const auto& flag : sectionFlags) {
             if (section.Characteristics & flag.flag) {
-                if (!charStr.empty())
+                if (!charStr.empty()) {
                     charStr += ", ";
+                }
                 charStr += flag.name;
             }
         }
