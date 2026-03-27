@@ -23,15 +23,16 @@ public:
     void DrawOpenWindowList();
 
     template <typename T>
-    [[nodiscard]] T* GetPane();
-    template <typename T, typename... Args>
+    [[nodiscard]] T* GetPane() const;
+    template <std::derived_from<Pane> T, typename... Args>
     T& AddPane(Args&&... args);
 
-    std::vector<std::unique_ptr<Pane>>& GetPanes() { return m_Panes; }
-    const std::vector<std::unique_ptr<Pane>>& GetPanes() const { return m_Panes; }
+    [[nodiscard]] std::vector<std::unique_ptr<Pane>>& GetPanes() { return m_Panes; }
+    [[nodiscard]] const std::vector<std::unique_ptr<Pane>>& GetPanes() const { return m_Panes; }
 
     [[nodiscard]] ModalManager& GetModalManager() { return m_ModalManager; }
     [[nodiscard]] const ModalManager& GetModalManager() const { return m_ModalManager; }
+
     [[nodiscard]] KeybindManager& GetKeybindManager() { return m_KeybindManager; }
     [[nodiscard]] const KeybindManager& GetKeybindManager() const { return m_KeybindManager; }
 
@@ -55,9 +56,9 @@ private:
 };
 
 template <typename T>
-T* MainLayer::GetPane()
+T* MainLayer::GetPane() const
 {
-    for (const auto& pane : m_Panes) {
+    for (const std::unique_ptr<Pane>& pane : m_Panes) {
         if (T* casted = dynamic_cast<T*>(pane.get())) {
             return casted;
         }
@@ -65,10 +66,8 @@ T* MainLayer::GetPane()
     return nullptr;
 }
 
-template <typename T, typename... Args>
+template <std::derived_from<Pane> T, typename... Args>
 T& MainLayer::AddPane(Args&&... args)
 {
-    static_assert(std::is_base_of_v<Pane, T>, "T must be derived from Pane");
-    m_Panes.push_back(std::make_unique<T>(std::forward<Args>(args)...));
-    return *static_cast<T*>(m_Panes.back().get());
+    return static_cast<T&>(*m_Panes.emplace_back(std::make_unique<T>(std::forward<Args>(args)...)));
 }

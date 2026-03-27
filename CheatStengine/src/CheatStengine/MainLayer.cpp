@@ -150,7 +150,7 @@ void MainLayer::DrawOpenProcessList()
                 continue;
             }
 
-            ImGui::PushID(i);
+            ImGui::PushID(static_cast<int>(i));
 
             if (ImGui::Selectable(proc.szExeFile)) {
                 m_State.Process = Process(proc.th32ProcessID);
@@ -187,7 +187,7 @@ void MainLayer::DrawOpenWindowList()
                 continue;
             }
 
-            ImGui::PushID(i);
+            ImGui::PushID(static_cast<int>(i));
 
             if (ImGui::Selectable(window.Title.c_str())) {
                 m_State.Process = Process(window.Pid);
