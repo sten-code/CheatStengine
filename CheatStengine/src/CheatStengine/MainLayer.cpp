@@ -24,7 +24,7 @@ MainLayer::MainLayer(Window& window)
     , m_MenuBar(*this)
     , m_TitleBar(window, m_State)
 {
-    m_State.Process = Process("RobloxPlayerBeta.exe");
+    m_State.Process = Process::Create("RobloxPlayerBeta.exe");
     m_ModalManager.RegisterModal("Open Process", BIND_FN(MainLayer::OpenProcessModal));
 
     AddPane<ModulesPane>(m_State);
@@ -36,12 +36,12 @@ MainLayer::MainLayer(Window& window)
     AddPane<PEViewer>(m_State);
     StructDissectPane& structDissectPane = AddPane<StructDissectPane>(m_State, m_ModalManager, m_KeybindManager);
 
-    if (AddressEvaluator::Result result = AddressEvaluator::Evaluate("robloxplayerbeta.exe+0x795A0D8", m_State.Process);
+    if (AddressEvaluator::Result result = AddressEvaluator::Evaluate("robloxplayerbeta.exe+0x795A0D8", *m_State.Process);
         !result.IsError()) {
         structDissectPane.AddDissection("FakeDataModel", result.Value);
     }
 
-    if (AddressEvaluator::Result result = AddressEvaluator::Evaluate("robloxplayerbeta.exe+0x7A08710", m_State.Process);
+    if (AddressEvaluator::Result result = AddressEvaluator::Evaluate("robloxplayerbeta.exe+0x7A08710", *m_State.Process);
         !result.IsError()) {
         structDissectPane.AddDissection("RawScheduler", result.Value);
     }
@@ -53,8 +53,8 @@ void MainLayer::OnAttach()
 
 void MainLayer::OnUpdate(float deltaTime)
 {
-    if (m_State.Process.IsValid()) {
-        m_State.Modules = m_State.Process.GetModuleEntries();
+    if (m_State.Process->IsValid()) {
+        m_State.Modules = m_State.Process->GetModuleEntries();
     }
 }
 
@@ -155,8 +155,8 @@ void MainLayer::DrawOpenProcessList()
             ImGui::PushID(static_cast<int>(i));
 
             if (ImGui::Selectable(proc.szExeFile)) {
-                m_State.Process = Process(proc.th32ProcessID);
-                m_State.Modules = m_State.Process.GetModuleEntries();
+                m_State.Process = Process::Create(proc.th32ProcessID);
+                m_State.Modules = m_State.Process->GetModuleEntries();
                 ImGui::CloseCurrentPopup();
             }
 
@@ -192,8 +192,8 @@ void MainLayer::DrawOpenWindowList()
             ImGui::PushID(static_cast<int>(i));
 
             if (ImGui::Selectable(window.Title.c_str())) {
-                m_State.Process = Process(window.Pid);
-                m_State.Modules = m_State.Process.GetModuleEntries();
+                m_State.Process = Process::Create(window.Pid);
+                m_State.Modules = m_State.Process->GetModuleEntries();
                 ImGui::CloseCurrentPopup();
             }
 

@@ -70,7 +70,7 @@ void DisassemblyPane::HandleKeybinds()
 void DisassemblyPane::Analyze(uintptr_t address)
 {
     INFO("Analyzing Address: 0x{:X}", address);
-    std::optional<MEMORY_BASIC_INFORMATION> mbi = m_State.Process.Query(address);
+    std::optional<MEMORY_BASIC_INFORMATION> mbi = m_State.Process->Query(address);
     if (!mbi) {
         ERR("Failed to query memory at address 0x{:X}", address);
         return;
@@ -84,7 +84,7 @@ void DisassemblyPane::Analyze(uintptr_t address)
 void DisassemblyPane::AnalyzePage(uintptr_t pageAddr, size_t pageSize)
 {
     // INFO("Analyzing page: 0x{:X} (size: 0x{:X})", pageAddr, pageSize);
-    std::vector<uint8_t> code = m_State.Process.ReadBuffer(pageAddr, pageSize);
+    std::vector<uint8_t> code = m_State.Process->ReadBytes(pageAddr, pageSize);
 
     uintptr_t bytesDecoded = 0;
     while (bytesDecoded < code.size()) {
@@ -345,7 +345,7 @@ void DisassemblyPane::AssembleModal(const std::string& name, const std::any& pay
             //     INFO("Byte {:d}: 0x{:02X}", i, code[i]);
             // }
 
-            m_State.Process.WriteBuffer(m_SelectedAddress, code, codeSize);
+            m_State.Process->WriteBuffer(m_SelectedAddress, code, codeSize);
             Analyze(m_SelectedAddress);
             ImGui::CloseCurrentPopup();
         }
@@ -359,7 +359,7 @@ void DisassemblyPane::AssembleModal(const std::string& name, const std::any& pay
 
 void DisassemblyPane::GotoAddressInput()
 {
-    AddressEvaluator::Result result = AddressEvaluator::Evaluate(m_AddressInput, m_State.Process);
+    AddressEvaluator::Result result = AddressEvaluator::Evaluate(m_AddressInput, *m_State.Process);
     if (result.IsError()) {
         return;
     }

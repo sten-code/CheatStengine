@@ -1,5 +1,6 @@
 #include "MemoryScanner.h"
 
+#include <CheatStengine/Process/Process.h>
 #include <Engine/Core/Core.h>
 
 #include <future>
@@ -131,7 +132,7 @@ bool MemoryScanner::FirstScan(ValueType valueType, ScanType scanType, uintptr_t 
         regions.reserve(256);
         uintptr_t currentAddress = minAddress;
         while (currentAddress < maxAddress) {
-            std::optional<MEMORY_BASIC_INFORMATION> mbi = m_Process.Query(currentAddress);
+            std::optional<MEMORY_BASIC_INFORMATION> mbi = m_Process->Query(currentAddress);
             if (!mbi) {
                 currentAddress += 0x1000;
                 continue;
@@ -158,7 +159,7 @@ bool MemoryScanner::FirstScan(ValueType valueType, ScanType scanType, uintptr_t 
         for (const auto& [address, size] : regions) {
             futures.emplace_back(std::async(std::launch::async, [this, address, size, typeSize, scanType, valueType, &targetValue1, &targetValue2]() -> std::vector<ScannedAddress> {
                 std::vector<uint8_t> buffer(size);
-                if (!m_Process.ReadBuffer(address, buffer.data(), size)) {
+                if (!m_Process->ReadBuffer(address, buffer.data(), size)) {
                     return {};
                 }
 
@@ -250,7 +251,7 @@ void MemoryScanner::NextScan(ValueType valueType, ScanType scanType, uintptr_t m
                 if (addr.Address < minAddress || addr.Address >= maxAddress) {
                     continue;
                 }
-                ScanValue value = addr.ReadValue(m_Process);
+                ScanValue value = addr.ReadValue(*m_Process);
                 if (CompareValues(scanType, value, targetValue1, targetValue2)) {
                     threadResults.push_back(addr);
                     threadResults.back().PreviousValue = value;

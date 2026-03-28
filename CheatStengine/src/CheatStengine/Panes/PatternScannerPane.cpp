@@ -66,7 +66,7 @@ void PatternScannerPane::PerformPatternScan(std::string_view pattern, const MODU
     zasm::Decoder decoder(zasm::MachineMode::AMD64);
     for (uintptr_t address : results) {
         INFO("Decoding instruction at 0x{:X}", address);
-        std::vector<uint8_t> code = m_State.Process.ReadBuffer(address, 16);
+        std::vector<uint8_t> code = m_State.Process->ReadBytes(address, 16);
         zasm::Decoder::Result result = decoder.decode(code.data(), code.size(), address);
         if (result.hasValue()) {
             FormattedInstruction formatted = Formatter::Format(result->getInstruction(), Formatter::Options { .ImmediateFormatter = [this](uint64_t val) {

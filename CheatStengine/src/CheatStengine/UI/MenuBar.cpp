@@ -203,7 +203,7 @@ void MenuBar::AllocateMemoryModal(const std::string& name, const std::any& paylo
     if (allocate) {
         try {
             size_t size = std::stoull(sizeInput);
-            uintptr_t address = m_MainLayer.m_State.Process.Allocate(size, PAGE_READWRITE);
+            uintptr_t address = m_MainLayer.m_State.Process->Allocate(size, PAGE_READWRITE);
             if (address == 0) {
                 ERR("Failed to allocate memory");
                 return;

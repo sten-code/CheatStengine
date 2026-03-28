@@ -82,12 +82,12 @@ void WatchPane::Draw(double deltaTime)
                 ImGui::PopStyleColor();
 
                 // Value
-                std::string valueStr = memoryAddr.ReadValue(m_State.Process);
+                std::string valueStr = memoryAddr.ReadValue(*m_State.Process);
                 ImGui::TableSetColumnIndex(3);
                 ImGui::SetCursorPosX(ImGui::GetCursorPosX() + 4);
                 std::string valueLabel = std::format("watch_value_{}_{:X}", i, memoryAddr.Address);
                 if (ImGui::EditableLabel(valueLabel.c_str(), &valueStr)) {
-                    memoryAddr.WriteValue(m_State.Process, valueStr);
+                    memoryAddr.WriteValue(*m_State.Process, valueStr);
                 }
 
                 // All columns
@@ -148,7 +148,7 @@ void WatchPane::AddAddressModal(const std::string& name, const std::any& payload
         }
 
         if (ImGui::Button("OK")) {
-            AddressEvaluator::Result result = AddressEvaluator::Evaluate(m_AddressInput, m_State.Process);
+            AddressEvaluator::Result result = AddressEvaluator::Evaluate(m_AddressInput, *m_State.Process);
             if (!result.IsError()) {
                 uintptr_t address = result.Value;
                 INFO("Going to address: 0x{:X}", address);

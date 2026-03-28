@@ -74,7 +74,7 @@ void MemoryScannerPane::Draw(double deltaTime)
                             ImGui::Text("0x%llX", result.Address);
                         }
 
-                        std::string valueStr = ScanValueToString(result.ReadValue(m_State.Process), m_IsInputHex);
+                        std::string valueStr = ScanValueToString(result.ReadValue(*m_State.Process), m_IsInputHex);
                         std::string previousStr = ScanValueToString(result.PreviousValue, m_IsInputHex);
                         std::string firstStr = ScanValueToString(result.FirstValue, m_IsInputHex);
 

@@ -3,7 +3,7 @@
 #include "Ast.h"
 #include "Error.h"
 
-#include <CheatStengine/Core/Process.h>
+#include <CheatStengine/Process/Process.h>
 
 #include <unordered_map>
 

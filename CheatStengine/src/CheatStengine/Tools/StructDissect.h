@@ -1,7 +1,6 @@
 #pragma once
 
-#include <CheatStengine/Core/Process.h>
-
+#include <CheatStengine/Process/Process.h>
 #include <Engine/Core/Core.h>
 
 #include <cstdint>

@@ -1,7 +1,7 @@
-#include "Assembly/Formatter.h"
-
 #include <CheatStengine/Assembly/Assembler.h>
+#include <CheatStengine/Assembly/Formatter.h>
 #include <CheatStengine/MainLayer.h>
+#include <CheatStengine/Process/Process.h>
 #include <CheatStengine/UI/ImGui/Fonts.h>
 #include <Engine/Core/Application.h>
 #include <Engine/Core/EntryPoint.h>

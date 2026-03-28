@@ -1,6 +1,6 @@
 #pragma once
 
-#include <CheatStengine/Core/Process.h>
+#include <CheatStengine/Process/Process.h>
 
 #include <Windows.h>
 
@@ -67,7 +67,7 @@ enum class ScanType {
 
 class MemoryScanner {
 public:
-    explicit MemoryScanner(const Process& proc)
+    explicit MemoryScanner(const std::unique_ptr<Process>& proc)
         : m_Process(proc)
     {
         m_CurrentResults.reserve(100000);
@@ -104,7 +104,7 @@ private:
     static bool IsValidMemoryRegion(const MEMORY_BASIC_INFORMATION& memInfo);
 
 private:
-    const Process& m_Process;
+    const std::unique_ptr<Process>& m_Process;
 
     std::vector<ScannedAddress> m_CurrentResults;
     std::mutex m_Mutex;

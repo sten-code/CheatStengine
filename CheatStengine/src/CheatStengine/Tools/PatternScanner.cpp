@@ -1,5 +1,7 @@
 #include "PatternScanner.h"
 
+#include <charconv>
+
 static std::vector<int> ParsePattern(std::string_view pattern)
 {
     std::vector<int> bytes;
@@ -84,7 +86,7 @@ static uintptr_t SigScanInBuffer(uintptr_t base, const std::vector<uint8_t>& buf
     return 0;
 }
 
-PatternScanner::PatternScanner(Process& process)
+PatternScanner::PatternScanner(std::unique_ptr<Process>& process)
     : m_Process(process)
 {
 }
@@ -95,7 +97,7 @@ std::vector<uintptr_t> PatternScanner::PatternScan(std::string_view pattern, uin
 
     std::vector<uintptr_t> results;
     while (start < end) {
-        std::optional<MEMORY_BASIC_INFORMATION> mbi = m_Process.Query(start);
+        std::optional<MEMORY_BASIC_INFORMATION> mbi = m_Process->Query(start);
         if (!mbi) {
             break;
         }
@@ -110,7 +112,7 @@ std::vector<uintptr_t> PatternScanner::PatternScan(std::string_view pattern, uin
         }
 
         std::vector<uint8_t> buffer(regionSize);
-        if (!m_Process.ReadBuffer(start, buffer.data(), regionSize)) {
+        if (!m_Process->ReadBuffer(start, buffer.data(), regionSize)) {
             start = regionEnd;
             continue;
         }
@@ -130,7 +132,7 @@ std::vector<uintptr_t> PatternScanner::PatternScan(std::string_view pattern, uin
 
 std::vector<uintptr_t> PatternScanner::PatternScan(std::string_view pattern, std::string_view moduleName, bool stopAtFirst) const
 {
-    MODULEENTRY32 moduleEntry = m_Process.GetModuleEntry(moduleName);
+    MODULEENTRY32 moduleEntry = m_Process->GetModuleEntry(moduleName);
     return PatternScan(pattern,
         reinterpret_cast<uintptr_t>(moduleEntry.modBaseAddr),
         reinterpret_cast<uintptr_t>(moduleEntry.modBaseAddr) + moduleEntry.modBaseSize, stopAtFirst);
@@ -147,7 +149,7 @@ std::optional<uintptr_t> PatternScanner::PatternScanOnce(std::string_view patter
 
 std::optional<uintptr_t> PatternScanner::PatternScanOnce(std::string_view pattern, std::string_view moduleName) const
 {
-    MODULEENTRY32 moduleEntry = m_Process.GetModuleEntry(moduleName);
+    MODULEENTRY32 moduleEntry = m_Process->GetModuleEntry(moduleName);
     return PatternScanOnce(pattern,
         reinterpret_cast<uintptr_t>(moduleEntry.modBaseAddr),
         reinterpret_cast<uintptr_t>(moduleEntry.modBaseAddr) + moduleEntry.modBaseSize);

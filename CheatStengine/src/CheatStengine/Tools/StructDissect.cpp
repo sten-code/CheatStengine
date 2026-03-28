@@ -1,6 +1,5 @@
 #include "StructDissect.h"
 
-#include <CheatStengine/Core/Process.h>
 #include <CheatStengine/Tools/RTTI.h>
 
 #include <imgui.h>
@@ -13,7 +12,7 @@ std::vector<Field> ExploreAddress(Process& proc, uintptr_t baseAddress, size_t s
         return {};
     }
 
-    std::vector<uint8_t> buffer = proc.ReadBuffer(baseAddress, size);
+    std::vector<uint8_t> buffer = proc.ReadBytes(baseAddress, size);
     if (buffer.empty()) {
         return {};
     }

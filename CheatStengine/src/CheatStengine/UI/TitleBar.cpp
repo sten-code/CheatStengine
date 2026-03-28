@@ -30,8 +30,8 @@ bool TitleBar::Draw()
         ImVec2(width - BUTTON_WIDTH * 3 + buttonRightOffset, TITLEBAR_HEIGHT));
     bool titleBarHovered = ImGui::IsItemHovered();
 
-    if (m_State.Process.IsValid()) {
-        std::string title = std::format("{:08X}-{}", reinterpret_cast<uint64_t>(m_State.Process.GetHandle()), m_State.Process.GetName());
+    if (m_State.Process->IsValid()) {
+        std::string title = std::format("{}-{}", m_State.Process->GetPid(), m_State.Process->GetName());
         ImVec2 textSize = ImGui::CalcTextSize(title.c_str());
         ImGui::SetCursorPos(ImVec2(width / 2.0f - textSize.x / 2.0f, titlebarVerticalOffset + TITLEBAR_HEIGHT / 2.0f - ImGui::GetTextLineHeight() / 2.0f));
         ImGui::Text(title.c_str());

@@ -1,6 +1,6 @@
 #pragma once
 
-#include <CheatStengine/Core/Process.h>
+#include <CheatStengine/Process/Process.h>
 
 #include <Windows.h>
 

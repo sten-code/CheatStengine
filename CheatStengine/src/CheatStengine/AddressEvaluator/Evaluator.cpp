@@ -1,10 +1,10 @@
 #include "Evaluator.h"
-
 #include "Lexer.h"
 #include "Parser.h"
 
-#include <CheatStengine/Core/Process.h>
+#include <CheatStengine/Process/Process.h>
 #include <Engine/Core/Log.h>
+
 #include <iostream>
 
 namespace AddressEvaluator {

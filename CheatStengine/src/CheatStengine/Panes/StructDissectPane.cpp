@@ -246,14 +246,14 @@ void StructDissectPane::PerformSearch(Dissection& dissection)
 
         if (IsExpandableType(field.Type) && field.Expanded) {
             if (!field.Explored) {
-                Field::Pointed pointed = field.GetPointedAddress(m_State.Process, addr);
-                field.Children = ExploreAddress(m_State.Process, pointed.Address, pointed.Size);
+                Field::Pointed pointed = field.GetPointedAddress(*m_State.Process, addr);
+                field.Children = ExploreAddress(*m_State.Process, pointed.Address, pointed.Size);
                 field.Explored = true;
             }
 
             uintptr_t childBaseAddr = (field.Type == FieldType::Dissection)
                 ? addr + field.Offset
-                : field.GetPointedAddress(m_State.Process, addr).Address;
+                : field.GetPointedAddress(*m_State.Process, addr).Address;
 
             for (size_t i = 0; i < field.Children.size(); i++) {
                 collectRows(field.Children[i], &field, childBaseAddr, i);
@@ -281,7 +281,7 @@ void StructDissectPane::PerformSearch(Dissection& dissection)
                 currentField.Name);
         }
 
-        FieldValue value = currentField.ReadField(m_State.Process, rowInfo.BaseAddress);
+        FieldValue value = currentField.ReadField(*m_State.Process, rowInfo.BaseAddress);
 
         auto matchAndConsume = [&](const std::string& text) -> bool {
             if (m_SearchIndex == 0)
@@ -351,7 +351,7 @@ void StructDissectPane::Draw(double deltaTime)
 
 void StructDissectPane::AddDissection(const std::string& name, uintptr_t address) const
 {
-    m_State.Dissections.emplace_back(m_State.Process, name, address);
+    m_State.Dissections.emplace_back(*m_State.Process, name, address);
 }
 
 void StructDissectPane::DrawDissection(Dissection& dissection)
@@ -400,14 +400,14 @@ void StructDissectPane::DrawField(Field& field, uintptr_t baseAddress, size_t de
 
         if (IsExpandableType(field.Type) && field.Expanded) {
             if (!field.Explored) {
-                Field::Pointed pointed = field.GetPointedAddress(m_State.Process, addr);
-                field.Children = ExploreAddress(m_State.Process, pointed.Address, pointed.Size);
+                Field::Pointed pointed = field.GetPointedAddress(*m_State.Process, addr);
+                field.Children = ExploreAddress(*m_State.Process, pointed.Address, pointed.Size);
                 field.Explored = true;
             }
 
             uintptr_t childBaseAddr = (field.Type == FieldType::Dissection)
                 ? addr + field.Offset
-                : field.GetPointedAddress(m_State.Process, addr).Address;
+                : field.GetPointedAddress(*m_State.Process, addr).Address;
 
             for (size_t i = 0; i < field.Children.size(); i++) {
                 collectRows(field.Children[i], &field, childBaseAddr, depth + 1, i);
@@ -466,7 +466,7 @@ void StructDissectPane::DrawField(Field& field, uintptr_t baseAddress, size_t de
                     currentField.Name);
             }
 
-            FieldValue value = currentField.ReadField(m_State.Process, rowInfo.BaseAddress);
+            FieldValue value = currentField.ReadField(*m_State.Process, rowInfo.BaseAddress);
 
             if (ImGui::Selectable("", rowInfo.Selected, ImGuiSelectableFlags_SpanAllColumns | ImGuiSelectableFlags_AllowOverlap,
                     ImVec2(0.0f, ImGui::GetTextLineHeightWithSpacing()))) {
@@ -666,13 +666,13 @@ bool StructDissectPane::FieldContextMenu(
 
             if (ImGui::RoundedMenuItem("Re-explore")) {
                 if (field.Type == FieldType::StartEndPointer) {
-                    StartEndPointer pair = m_State.Process.Read<StartEndPointer>(address);
-                    field.Children = ExploreAddress(m_State.Process, pair.Start, pair.End - pair.Start);
+                    StartEndPointer pair = m_State.Process->Read<StartEndPointer>(address);
+                    field.Children = ExploreAddress(*m_State.Process, pair.Start, pair.End - pair.Start);
                 } else if (field.Type == FieldType::Pointer) {
-                    uintptr_t pointedAddress = m_State.Process.Read<uintptr_t>(address);
-                    field.Children = ExploreAddress(m_State.Process, pointedAddress, field.Size);
+                    uintptr_t pointedAddress = m_State.Process->Read<uintptr_t>(address);
+                    field.Children = ExploreAddress(*m_State.Process, pointedAddress, field.Size);
                 } else {
-                    field.Children = ExploreAddress(m_State.Process, address, field.Size);
+                    field.Children = ExploreAddress(*m_State.Process, address, field.Size);
                 }
                 field.Explored = true;
             }
@@ -724,7 +724,7 @@ void StructDissectPane::AddDissectionModal(const std::string& name, const std::a
         }
 
         if (commitNow || ImGui::Button("OK", ImVec2 { 70.0f, 0 })) {
-            AddressEvaluator::Result result = AddressEvaluator::Evaluate(addressInput, m_State.Process);
+            AddressEvaluator::Result result = AddressEvaluator::Evaluate(addressInput, *m_State.Process);
             if (!result.IsError()) {
                 uintptr_t address = result.Value;
                 AddDissection(dissectionName, address);
@@ -918,7 +918,7 @@ void StructDissectPane::EditValueModal(const std::string& name, const std::any& 
 
         if (commitNow || ImGui::Button("OK", ImVec2 { 70.0f, 0 })) {
             FieldValue value = ParseFieldValue(valueInput, payload.Field);
-            payload.Field.WriteField(m_State.Process, payload.Address - payload.Field.Offset, value);
+            payload.Field.WriteField(*m_State.Process, payload.Address - payload.Field.Offset, value);
             ImGui::CloseCurrentPopup();
         }
         ImGui::SameLine();
@@ -952,10 +952,10 @@ void StructDissectPane::ChangeSizeModal(const std::string& name, const std::any&
         if (commitNow || ImGui::Button("OK", ImVec2 { 70.0f, 0 })) {
             try {
                 size_t size = std::stoull(sizeInput, nullptr, 16);
-                uintptr_t pointedAddress = m_State.Process.Read<uintptr_t>(payload.Address);
+                uintptr_t pointedAddress = m_State.Process->Read<uintptr_t>(payload.Address);
 
                 payload.Field.Size = size;
-                payload.Field.Children = ExploreAddress(m_State.Process, pointedAddress, size);
+                payload.Field.Children = ExploreAddress(*m_State.Process, pointedAddress, size);
                 ImGui::CloseCurrentPopup();
             } catch (...) {
             }

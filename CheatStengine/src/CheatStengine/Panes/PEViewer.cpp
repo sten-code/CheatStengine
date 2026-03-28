@@ -281,19 +281,19 @@ static void DrawOptionalHeader(const T& optionalHeader)
 void PEViewer::DrawHeadersTab()
 {
     const MODULEENTRY32& entry = m_State.Modules[m_SelectedIndex];
-    IMAGE_DOS_HEADER dosHeader = m_State.Process.Read<IMAGE_DOS_HEADER>(reinterpret_cast<uintptr_t>(entry.modBaseAddr));
+    IMAGE_DOS_HEADER dosHeader = m_State.Process->Read<IMAGE_DOS_HEADER>(reinterpret_cast<uintptr_t>(entry.modBaseAddr));
     uintptr_t ntAddr = reinterpret_cast<uintptr_t>(entry.modBaseAddr) + dosHeader.e_lfanew;
 
-    DWORD ntSignature = m_State.Process.Read<DWORD>(ntAddr);
-    WORD optionalMagic = m_State.Process.Read<WORD>(ntAddr + sizeof(DWORD) + sizeof(IMAGE_FILE_HEADER));
+    DWORD ntSignature = m_State.Process->Read<DWORD>(ntAddr);
+    WORD optionalMagic = m_State.Process->Read<WORD>(ntAddr + sizeof(DWORD) + sizeof(IMAGE_FILE_HEADER));
 
     bool is32 = (optionalMagic == IMAGE_NT_OPTIONAL_HDR32_MAGIC);
     IMAGE_NT_HEADERS32 ntHeaders32 {};
     IMAGE_NT_HEADERS64 ntHeaders64 {};
     if (is32) {
-        ntHeaders32 = m_State.Process.Read<IMAGE_NT_HEADERS32>(ntAddr);
+        ntHeaders32 = m_State.Process->Read<IMAGE_NT_HEADERS32>(ntAddr);
     } else {
-        ntHeaders64 = m_State.Process.Read<IMAGE_NT_HEADERS64>(ntAddr);
+        ntHeaders64 = m_State.Process->Read<IMAGE_NT_HEADERS64>(ntAddr);
     }
     IMAGE_FILE_HEADER& fileHeader = is32 ? ntHeaders32.FileHeader : ntHeaders64.FileHeader;
 
@@ -566,10 +566,10 @@ void PEViewer::DrawDataDirectories(const IMAGE_DATA_DIRECTORY* dataDirectories)
 void PEViewer::DrawDataDirectoriesTab()
 {
     const MODULEENTRY32& entry = m_State.Modules[m_SelectedIndex];
-    IMAGE_DOS_HEADER dosHeader = m_State.Process.Read<IMAGE_DOS_HEADER>(reinterpret_cast<uintptr_t>(entry.modBaseAddr));
+    IMAGE_DOS_HEADER dosHeader = m_State.Process->Read<IMAGE_DOS_HEADER>(reinterpret_cast<uintptr_t>(entry.modBaseAddr));
     uintptr_t ntAddr = reinterpret_cast<uintptr_t>(entry.modBaseAddr) + dosHeader.e_lfanew;
 
-    WORD optionalMagic = m_State.Process.Read<WORD>(ntAddr + sizeof(DWORD) + sizeof(IMAGE_FILE_HEADER));
+    WORD optionalMagic = m_State.Process->Read<WORD>(ntAddr + sizeof(DWORD) + sizeof(IMAGE_FILE_HEADER));
     bool is32 = (optionalMagic == IMAGE_NT_OPTIONAL_HDR32_MAGIC);
 
     IMAGE_NT_HEADERS32 ntHeaders32 {};
@@ -578,11 +578,11 @@ void PEViewer::DrawDataDirectoriesTab()
     DWORD numberOfRvaAndSizes = 0;
 
     if (is32) {
-        ntHeaders32 = m_State.Process.Read<IMAGE_NT_HEADERS32>(ntAddr);
+        ntHeaders32 = m_State.Process->Read<IMAGE_NT_HEADERS32>(ntAddr);
         dataDirectories = ntHeaders32.OptionalHeader.DataDirectory;
         numberOfRvaAndSizes = ntHeaders32.OptionalHeader.NumberOfRvaAndSizes;
     } else {
-        ntHeaders64 = m_State.Process.Read<IMAGE_NT_HEADERS64>(ntAddr);
+        ntHeaders64 = m_State.Process->Read<IMAGE_NT_HEADERS64>(ntAddr);
         dataDirectories = ntHeaders64.OptionalHeader.DataDirectory;
         numberOfRvaAndSizes = ntHeaders64.OptionalHeader.NumberOfRvaAndSizes;
     }
@@ -684,7 +684,7 @@ void PEViewer::DrawDirectoryDetails(const IMAGE_DATA_DIRECTORY& dir, DWORD index
             ImGui::Separator();
 
             std::vector<uint8_t> data(dir.Size);
-            m_State.Process.ReadBuffer(directoryAddress, data.data(), data.size());
+            m_State.Process->ReadBuffer(directoryAddress, data.data(), data.size());
 
             size_t dumpSize = data.size();
             size_t rows = (dumpSize + 15) / 16;
@@ -729,7 +729,7 @@ void PEViewer::DrawDirectoryDetails(const IMAGE_DATA_DIRECTORY& dir, DWORD index
 void PEViewer::DrawExportDirectory(uintptr_t baseAddress, const IMAGE_DATA_DIRECTORY& dir)
 {
     uintptr_t exportAddr = baseAddress + dir.VirtualAddress;
-    IMAGE_EXPORT_DIRECTORY exportDir = m_State.Process.Read<IMAGE_EXPORT_DIRECTORY>(exportAddr);
+    IMAGE_EXPORT_DIRECTORY exportDir = m_State.Process->Read<IMAGE_EXPORT_DIRECTORY>(exportAddr);
 
     ImGui::Text("Export Directory Information");
     ImGui::Separator();
@@ -773,11 +773,11 @@ void PEViewer::DrawExportDirectory(uintptr_t baseAddress, const IMAGE_DATA_DIREC
         clipper.Begin(count);
         while (clipper.Step()) {
             for (DWORD i = clipper.DisplayStart; i < clipper.DisplayEnd; ++i) {
-                DWORD nameRVA = m_State.Process.Read<DWORD>(namesAddr + i * sizeof(DWORD));
-                WORD ordinal = m_State.Process.Read<WORD>(ordinalsAddr + i * sizeof(WORD));
-                DWORD functionRVA = m_State.Process.Read<DWORD>(functionsAddr + ordinal * sizeof(DWORD));
+                DWORD nameRVA = m_State.Process->Read<DWORD>(namesAddr + i * sizeof(DWORD));
+                WORD ordinal = m_State.Process->Read<WORD>(ordinalsAddr + i * sizeof(WORD));
+                DWORD functionRVA = m_State.Process->Read<DWORD>(functionsAddr + ordinal * sizeof(DWORD));
 
-                std::string functionName = m_State.Process.ReadString(baseAddress + nameRVA, 128);
+                std::string functionName = m_State.Process->ReadString(baseAddress + nameRVA, 128);
 
                 ImGui::Text("%s (Ordinal: %d, RVA: 0x%08X)",
                     functionName.c_str(), ordinal + exportDir.Base, functionRVA);
@@ -795,12 +795,12 @@ void PEViewer::DrawImportDirectory(uintptr_t baseAddress, const IMAGE_DATA_DIREC
 
     DWORD index = 0;
     while (true) {
-        IMAGE_IMPORT_DESCRIPTOR importDesc = m_State.Process.Read<IMAGE_IMPORT_DESCRIPTOR>(importAddr + index * sizeof(IMAGE_IMPORT_DESCRIPTOR));
+        IMAGE_IMPORT_DESCRIPTOR importDesc = m_State.Process->Read<IMAGE_IMPORT_DESCRIPTOR>(importAddr + index * sizeof(IMAGE_IMPORT_DESCRIPTOR));
         if (importDesc.OriginalFirstThunk == 0 && importDesc.FirstThunk == 0 && importDesc.Name == 0) {
             break;
         }
 
-        std::string moduleName = m_State.Process.ReadString(baseAddress + importDesc.Name, 256);
+        std::string moduleName = m_State.Process->ReadString(baseAddress + importDesc.Name, 256);
 
         ImGui::Text("Module: %s", moduleName.c_str());
         ImGui::Indent();
@@ -809,35 +809,35 @@ void PEViewer::DrawImportDirectory(uintptr_t baseAddress, const IMAGE_DATA_DIREC
 
         if (is32) {
             for (DWORD i = 0;; i++) {
-                uint32_t thunkValue = m_State.Process.Read<uint32_t>(thunkAddr + i * sizeof(uint32_t));
+                uint32_t thunkValue = m_State.Process->Read<uint32_t>(thunkAddr + i * sizeof(uint32_t));
                 if (thunkValue == 0) {
                     break;
                 }
 
                 if (thunkValue & IMAGE_ORDINAL_FLAG32) {
                     DWORD ordinal = thunkValue & 0xFFFF;
-                    ImGui::Text("Ordinal: %d (RVA: 0x%08X)", ordinal, thunkValue);
+                    ImGui::Text("Ordinal: %d (RVA: 0x%X)", ordinal, thunkValue);
                 } else {
                     uintptr_t importByNameAddr = baseAddress + thunkValue;
-                    IMAGE_IMPORT_BY_NAME importByName = m_State.Process.Read<IMAGE_IMPORT_BY_NAME>(importByNameAddr);
-                    std::string functionName = m_State.Process.ReadString(importByNameAddr + 2, 128);
+                    IMAGE_IMPORT_BY_NAME importByName = m_State.Process->Read<IMAGE_IMPORT_BY_NAME>(importByNameAddr);
+                    std::string functionName = m_State.Process->ReadString(importByNameAddr + 2, 128);
                     ImGui::Text("Function: %s (Hint: %d)", functionName.c_str(), importByName.Hint);
                 }
             }
         } else {
             for (DWORD i = 0;; i++) {
-                uint64_t thunkValue = m_State.Process.Read<uint64_t>(thunkAddr + i * sizeof(uint64_t));
+                uint64_t thunkValue = m_State.Process->Read<uint64_t>(thunkAddr + i * sizeof(uint64_t));
                 if (thunkValue == 0) {
                     break;
                 }
 
                 if (thunkValue & IMAGE_ORDINAL_FLAG64) {
                     DWORD ordinal = static_cast<DWORD>(thunkValue & 0xFFFF);
-                    ImGui::Text("Ordinal: %d (RVA: 0x%016llX)", ordinal, thunkValue);
+                    ImGui::Text("Ordinal: %d (RVA: 0x%llX)", ordinal, thunkValue);
                 } else {
                     uintptr_t importByNameAddr = baseAddress + thunkValue;
-                    IMAGE_IMPORT_BY_NAME importByName = m_State.Process.Read<IMAGE_IMPORT_BY_NAME>(importByNameAddr);
-                    std::string functionName = m_State.Process.ReadString(importByNameAddr + 2, 128);
+                    IMAGE_IMPORT_BY_NAME importByName = m_State.Process->Read<IMAGE_IMPORT_BY_NAME>(importByNameAddr);
+                    std::string functionName = m_State.Process->ReadString(importByNameAddr + 2, 128);
                     ImGui::Text("Function: %s (Hint: %d)", functionName.c_str(), importByName.Hint);
                 }
             }
@@ -860,15 +860,15 @@ void PEViewer::DrawResourceDirectory(uintptr_t baseAddress, const IMAGE_DATA_DIR
     ImGui::Text("Resource Types:");
     ImGui::Separator();
 
-    IMAGE_RESOURCE_DIRECTORY rootDir = m_State.Process.Read<IMAGE_RESOURCE_DIRECTORY>(resourceAddr);
+    IMAGE_RESOURCE_DIRECTORY rootDir = m_State.Process->Read<IMAGE_RESOURCE_DIRECTORY>(resourceAddr);
 
     for (DWORD i = 0; i < rootDir.NumberOfNamedEntries + rootDir.NumberOfIdEntries; i++) {
-        IMAGE_RESOURCE_DIRECTORY_ENTRY entry = m_State.Process.Read<IMAGE_RESOURCE_DIRECTORY_ENTRY>(
+        IMAGE_RESOURCE_DIRECTORY_ENTRY entry = m_State.Process->Read<IMAGE_RESOURCE_DIRECTORY_ENTRY>(
             resourceAddr + sizeof(IMAGE_RESOURCE_DIRECTORY) + i * sizeof(IMAGE_RESOURCE_DIRECTORY_ENTRY));
 
         if (entry.NameIsString) {
-            WORD length = m_State.Process.Read<WORD>(resourceAddr + entry.NameOffset);
-            std::vector<wchar_t> rawNameW = m_State.Process.ReadArray<wchar_t>(resourceAddr + entry.NameOffset + offsetof(IMAGE_RESOURCE_DIR_STRING_U, NameString), length);
+            WORD length = m_State.Process->Read<WORD>(resourceAddr + entry.NameOffset);
+            std::vector<wchar_t> rawNameW = m_State.Process->ReadArray<wchar_t>(resourceAddr + entry.NameOffset + offsetof(IMAGE_RESOURCE_DIR_STRING_U, NameString), length);
             std::wstring wName(rawNameW.begin(), rawNameW.end());
             int size = WideCharToMultiByte(CP_UTF8, 0, wName.c_str(), -1, nullptr, 0, nullptr, nullptr);
             std::string name;
@@ -878,7 +878,6 @@ void PEViewer::DrawResourceDirectory(uintptr_t baseAddress, const IMAGE_DATA_DIR
             }
             ImGui::Text("Named: %s", name.c_str());
         } else {
-            // ID entry
             ImGui::Text("ID: %d", entry.Id);
         }
     }
@@ -894,7 +893,7 @@ void PEViewer::DrawDebugDirectory(uintptr_t baseAddress, const IMAGE_DATA_DIRECT
     ImGui::Text("Number of debug entries: %d", numEntries);
 
     for (DWORD i = 0; i < numEntries; i++) {
-        IMAGE_DEBUG_DIRECTORY debugDir = m_State.Process.Read<IMAGE_DEBUG_DIRECTORY>(
+        IMAGE_DEBUG_DIRECTORY debugDir = m_State.Process->Read<IMAGE_DEBUG_DIRECTORY>(
             debugAddr + i * sizeof(IMAGE_DEBUG_DIRECTORY));
 
         ImGui::Text("Entry %d:", i);
@@ -914,6 +913,14 @@ void PEViewer::DrawDebugDirectory(uintptr_t baseAddress, const IMAGE_DATA_DIRECT
             case IMAGE_DEBUG_TYPE_BORLAND: type = "Borland"; break;
             case IMAGE_DEBUG_TYPE_RESERVED10: type = "Reserved10"; break;
             case IMAGE_DEBUG_TYPE_CLSID: type = "CLSID"; break;
+            case IMAGE_DEBUG_TYPE_VC_FEATURE: type = "VC Feature"; break;
+            case IMAGE_DEBUG_TYPE_POGO: type = "POGO"; break;
+            case IMAGE_DEBUG_TYPE_ILTCG: type = "ILTCG"; break;
+            case IMAGE_DEBUG_TYPE_MPX: type = "MPX"; break;
+            case IMAGE_DEBUG_TYPE_REPRO: type = "Repro"; break;
+            case IMAGE_DEBUG_TYPE_SPGO: type = "SPGO"; break;
+            case IMAGE_DEBUG_TYPE_EX_DLLCHARACTERISTICS: type = "Extended DLL Characteristics"; break;
+            default: break;
         }
 
         ImGui::Text("Type: %s (0x%04X)", type, debugDir.Type);
@@ -944,7 +951,7 @@ void PEViewer::DrawTLSDirectory(uintptr_t baseAddress, const IMAGE_DATA_DIRECTOR
     ImGui::Separator();
 
     if (is32) {
-        IMAGE_TLS_DIRECTORY32 tlsDir = m_State.Process.Read<IMAGE_TLS_DIRECTORY32>(tlsAddr);
+        IMAGE_TLS_DIRECTORY32 tlsDir = m_State.Process->Read<IMAGE_TLS_DIRECTORY32>(tlsAddr);
 
         ImGui::BeginTable("TLSInfo32", 2, ImGuiTableFlags_Resizable);
         ImGui::TableSetupColumn("Field", ImGuiTableColumnFlags_WidthFixed, 200.0f);
@@ -965,7 +972,7 @@ void PEViewer::DrawTLSDirectory(uintptr_t baseAddress, const IMAGE_DATA_DIRECTOR
 
         ImGui::EndTable();
     } else {
-        IMAGE_TLS_DIRECTORY64 tlsDir = m_State.Process.Read<IMAGE_TLS_DIRECTORY64>(tlsAddr);
+        IMAGE_TLS_DIRECTORY64 tlsDir = m_State.Process->Read<IMAGE_TLS_DIRECTORY64>(tlsAddr);
 
         ImGui::BeginTable("TLSInfo64", 2, ImGuiTableFlags_Resizable);
         ImGui::TableSetupColumn("Field", ImGuiTableColumnFlags_WidthFixed, 200.0f);
@@ -991,10 +998,10 @@ void PEViewer::DrawTLSDirectory(uintptr_t baseAddress, const IMAGE_DATA_DIRECTOR
 void PEViewer::DrawSectionsTab()
 {
     const MODULEENTRY32& entry = m_State.Modules[m_SelectedIndex];
-    IMAGE_DOS_HEADER dosHeader = m_State.Process.Read<IMAGE_DOS_HEADER>(reinterpret_cast<uintptr_t>(entry.modBaseAddr));
+    IMAGE_DOS_HEADER dosHeader = m_State.Process->Read<IMAGE_DOS_HEADER>(reinterpret_cast<uintptr_t>(entry.modBaseAddr));
     uintptr_t ntAddr = reinterpret_cast<uintptr_t>(entry.modBaseAddr) + dosHeader.e_lfanew;
 
-    WORD optionalMagic = m_State.Process.Read<WORD>(ntAddr + sizeof(DWORD) + sizeof(IMAGE_FILE_HEADER));
+    WORD optionalMagic = m_State.Process->Read<WORD>(ntAddr + sizeof(DWORD) + sizeof(IMAGE_FILE_HEADER));
     bool is32 = (optionalMagic == IMAGE_NT_OPTIONAL_HDR32_MAGIC);
 
     IMAGE_NT_HEADERS32 ntHeaders32 {};
@@ -1004,12 +1011,12 @@ void PEViewer::DrawSectionsTab()
     uintptr_t imageBase = 0;
 
     if (is32) {
-        ntHeaders32 = m_State.Process.Read<IMAGE_NT_HEADERS32>(ntAddr);
+        ntHeaders32 = m_State.Process->Read<IMAGE_NT_HEADERS32>(ntAddr);
         fileHeader = ntHeaders32.FileHeader;
         sectionStart = ntAddr + sizeof(DWORD) + sizeof(IMAGE_FILE_HEADER) + ntHeaders32.FileHeader.SizeOfOptionalHeader;
         imageBase = ntHeaders32.OptionalHeader.ImageBase;
     } else {
-        ntHeaders64 = m_State.Process.Read<IMAGE_NT_HEADERS64>(ntAddr);
+        ntHeaders64 = m_State.Process->Read<IMAGE_NT_HEADERS64>(ntAddr);
         fileHeader = ntHeaders64.FileHeader;
         sectionStart = ntAddr + sizeof(DWORD) + sizeof(IMAGE_FILE_HEADER) + ntHeaders64.FileHeader.SizeOfOptionalHeader;
         imageBase = ntHeaders64.OptionalHeader.ImageBase;
@@ -1038,7 +1045,7 @@ void PEViewer::DrawSectionsTab()
 
         std::vector<IMAGE_SECTION_HEADER> sections;
         for (WORD i = 0; i < fileHeader.NumberOfSections; i++) {
-            IMAGE_SECTION_HEADER section = m_State.Process.Read<IMAGE_SECTION_HEADER>(
+            IMAGE_SECTION_HEADER section = m_State.Process->Read<IMAGE_SECTION_HEADER>(
                 sectionStart + i * sizeof(IMAGE_SECTION_HEADER));
             sections.push_back(section);
         }
