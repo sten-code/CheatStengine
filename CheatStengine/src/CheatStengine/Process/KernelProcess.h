@@ -2,11 +2,11 @@
 
 #include "Process.h"
 
-class WinAPIProcess final : public Process {
+class KernelProcess final : public Process {
 public:
-    explicit WinAPIProcess(DWORD pid);
-    explicit WinAPIProcess(const std::string& procName);
-    ~WinAPIProcess() override;
+    explicit KernelProcess(DWORD pid);
+    explicit KernelProcess(const std::string& procName);
+    ~KernelProcess() override;
 
     [[nodiscard]] uintptr_t Allocate(size_t size, uint32_t protection, uint32_t allocationType = MEM_COMMIT | MEM_RESERVE) const override;
     void Free(uintptr_t address, uint32_t freeType = MEM_DECOMMIT) const override;
@@ -23,5 +23,6 @@ public:
     [[nodiscard]] std::string GetName() override;
 
 private:
-    HANDLE m_Handle = nullptr;
+    HANDLE m_DeviceHandle = nullptr;
+    std::string m_Name;
 };

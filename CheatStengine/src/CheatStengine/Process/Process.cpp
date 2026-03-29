@@ -1,5 +1,6 @@
 #include "Process.h"
 
+#include "KernelProcess.h"
 #include "WinAPIProcess.h"
 
 #include <Psapi.h>
@@ -139,6 +140,7 @@ std::unique_ptr<Process> Process::Create(DWORD pid, ProcessMode mode)
 {
     switch (mode) {
         case ProcessMode::WinAPI: return std::make_unique<WinAPIProcess>(pid);
+        case ProcessMode::Kernel: return std::make_unique<KernelProcess>(pid);
         default: return nullptr;
     }
 }
@@ -147,6 +149,7 @@ std::unique_ptr<Process> Process::Create(const std::string& procName, ProcessMod
 {
     switch (mode) {
         case ProcessMode::WinAPI: return std::make_unique<WinAPIProcess>(procName);
+        case ProcessMode::Kernel: return std::make_unique<KernelProcess>(procName);
         default: return nullptr;
     }
 }

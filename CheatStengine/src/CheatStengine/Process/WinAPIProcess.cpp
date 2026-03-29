@@ -125,7 +125,7 @@ std::vector<MODULEENTRY32> WinAPIProcess::GetModuleEntries(bool refresh) const
     return modules;
 }
 
-std::string WinAPIProcess::GetName() const
+std::string WinAPIProcess::GetName()
 {
     char buffer[MAX_PATH];
     if (GetModuleBaseNameA(m_Handle, nullptr, buffer, sizeof(buffer))) {

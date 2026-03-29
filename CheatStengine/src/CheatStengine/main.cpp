@@ -38,6 +38,31 @@ public:
 
 Application* CreateApplication()
 {
+    // std::unique_ptr<Process> proc = Process::Create("Notepad.exe", ProcessMode::Kernel);
+
+    // std::optional<uint32_t> oldProtect = proc->Protect(0x24A299A0000, 0x1000, PAGE_EXECUTE_READWRITE);
+    // if (oldProtect) {
+    //     INFO("Old protection: 0x{:X}", *oldProtect);
+    // } else {
+    //     ERR("Failed to change protection");
+    // }
+
+    // uintptr_t allocatedMemory = proc->Allocate(0x1000, PAGE_EXECUTE_READWRITE);
+    // INFO("Allocated memory at 0x{:X}", allocatedMemory);
+
+    // proc->Free(0x1B97EBA0000);
+
+    // std::optional<MEMORY_BASIC_INFORMATION> mbi = proc->Query(0x7FF705CD1132);
+    // if (mbi) {
+    //     INFO("Memory at 0x7FF77D7C1132: BaseAddress=0x{:X}, RegionSize=0x{:X}, State=0x{:X}, Protect=0x{:X}, Type=0x{:X}",
+    //         reinterpret_cast<uintptr_t>(mbi->BaseAddress), mbi->RegionSize, mbi->State, mbi->Protect, mbi->Type);
+    // }
+
+    // proc->Write<uintptr_t>(0x7FF705CD1132, 0xCCCCCCCC69CCCCCC);
+    //
+    // uintptr_t value = proc->Read<uintptr_t>(0x7FF705CD1132);
+    // INFO("Value at 0x7FF705CD1132: 0x{:X}", value);
+
     return new CheatStengine();
 }
 

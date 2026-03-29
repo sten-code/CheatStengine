@@ -69,14 +69,16 @@ void DisassemblyPane::HandleKeybinds()
 
 void DisassemblyPane::Analyze(uintptr_t address)
 {
-    INFO("Analyzing Address: 0x{:X}", address);
     std::optional<MEMORY_BASIC_INFORMATION> mbi = m_State.Process->Query(address);
     if (!mbi) {
-        ERR("Failed to query memory at address 0x{:X}", address);
+        return;
+    }
+    if (mbi->Protect & PAGE_NOACCESS) {
         return;
     }
 
     uintptr_t start = reinterpret_cast<uintptr_t>(mbi->BaseAddress);
+    INFO("Analyzing Address: 0x{:X}", address);
     INFO("  Start: 0x{:X}, Size: 0x{:X}", start, 0x1000);
     AnalyzePage(start, 0x1000);
 }
@@ -121,10 +123,11 @@ void DisassemblyPane::AnalyzePage(uintptr_t pageAddr, size_t pageSize)
 
 void DisassemblyPane::Draw(double deltaTime)
 {
-    static size_t counter = 0;
-    if (counter++ % 60 == 0) {
-        AnalyzePage(m_FocussedAddress, 0x1000);
-        counter = 0;
+    static double accumulator = 0.0;
+    accumulator += deltaTime;
+    if (accumulator >= 1.0) {
+        Analyze(m_FocussedAddress);
+        accumulator = 0.0;
     }
 
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2 { 0.0f, 0.0f });
