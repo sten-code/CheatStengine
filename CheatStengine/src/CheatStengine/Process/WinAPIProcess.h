@@ -9,7 +9,7 @@ public:
     ~WinAPIProcess() override;
 
     [[nodiscard]] uintptr_t Allocate(size_t size, uint32_t protection, uint32_t allocationType = MEM_COMMIT | MEM_RESERVE) const override;
-    void Free(uintptr_t address, uint32_t freeType = MEM_DECOMMIT) const override;
+    bool Free(uintptr_t address, uint32_t freeType = MEM_DECOMMIT) const override;
 
     [[nodiscard]] std::optional<MEMORY_BASIC_INFORMATION> Query(uintptr_t address) const override;
     std::optional<uint32_t> Protect(uintptr_t address, size_t size, uint32_t protection) const override;

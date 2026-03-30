@@ -26,7 +26,7 @@ public:
     virtual ~Process() = default;
 
     [[nodiscard]] virtual uintptr_t Allocate(size_t size, uint32_t protection, uint32_t allocationType = MEM_COMMIT | MEM_RESERVE) const = 0;
-    virtual void Free(uintptr_t address, uint32_t freeType = MEM_DECOMMIT) const = 0;
+    virtual bool Free(uintptr_t address, uint32_t freeType = MEM_DECOMMIT) const = 0;
 
     [[nodiscard]] virtual std::optional<MEMORY_BASIC_INFORMATION> Query(uintptr_t address) const = 0;
     virtual std::optional<uint32_t> Protect(uintptr_t address, size_t size, uint32_t protection) const = 0;

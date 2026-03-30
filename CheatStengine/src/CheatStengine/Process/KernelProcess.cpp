@@ -148,10 +148,10 @@ uintptr_t KernelProcess::Allocate(size_t size, uint32_t protection, uint32_t all
     return allocatedAddress;
 }
 
-void KernelProcess::Free(uintptr_t address, uint32_t freeType) const
+bool KernelProcess::Free(uintptr_t address, uint32_t freeType) const
 {
     if (!IsValid()) {
-        return;
+        return false;
     }
 
     CommandHeader command {};
@@ -160,7 +160,7 @@ void KernelProcess::Free(uintptr_t address, uint32_t freeType) const
     command.FreeMemoryData.Address = address;
     command.FreeMemoryData.Size = 0;
     command.FreeMemoryData.FreeType = freeType;
-    SendBuffer(m_DeviceHandle, &command);
+    return SendBuffer(m_DeviceHandle, &command);
 }
 
 std::optional<MEMORY_BASIC_INFORMATION> KernelProcess::Query(uintptr_t address) const

@@ -42,9 +42,9 @@ uintptr_t WinAPIProcess::Allocate(size_t size, uint32_t protection, uint32_t all
     return reinterpret_cast<uintptr_t>(VirtualAllocEx(m_Handle, nullptr, size, allocationType, protection));
 }
 
-void WinAPIProcess::Free(uintptr_t address, uint32_t freeType) const
+bool WinAPIProcess::Free(uintptr_t address, uint32_t freeType) const
 {
-    VirtualFreeEx(m_Handle, reinterpret_cast<LPVOID>(address), 0, freeType);
+    return VirtualFreeEx(m_Handle, reinterpret_cast<LPVOID>(address), 0, freeType);
 }
 
 std::optional<uint32_t> WinAPIProcess::Protect(uintptr_t address, size_t size, uint32_t protection) const
