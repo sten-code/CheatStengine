@@ -91,7 +91,7 @@ KernelProcess::KernelProcess(DWORD pid)
     m_DeviceHandle = CreateFileW(
         L"\\\\.\\CheatStengineDriver",
         GENERIC_READ | GENERIC_WRITE,
-        0,
+        FILE_SHARE_READ | FILE_SHARE_WRITE,
         nullptr,
         OPEN_EXISTING,
         0,
