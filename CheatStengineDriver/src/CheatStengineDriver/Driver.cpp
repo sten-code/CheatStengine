@@ -7,6 +7,8 @@ static UNICODE_STRING g_SymLink {};
 
 static NTSTATUS CreateClose(PDEVICE_OBJECT deviceObject, PIRP irp)
 {
+    UNREFERENCED_PARAMETER(deviceObject);
+
     irp->IoStatus.Status = STATUS_SUCCESS;
     irp->IoStatus.Information = 0;
     IoCompleteRequest(irp, IO_NO_INCREMENT);
@@ -15,12 +17,15 @@ static NTSTATUS CreateClose(PDEVICE_OBJECT deviceObject, PIRP irp)
 
 static NTSTATUS DeviceControl(PDEVICE_OBJECT deviceObject, PIRP irp)
 {
+    UNREFERENCED_PARAMETER(deviceObject);
+
     PIO_STACK_LOCATION irpSp = IoGetCurrentIrpStackLocation(irp);
 
     const ULONG ioCode = irpSp->Parameters.DeviceIoControl.IoControlCode;
     if (ioCode != IOCTL_CS_COMMAND) {
         DbgPrint("[CheatStengine] Unknown IOCTL: 0x%08X\n", ioCode);
         irp->IoStatus.Status = STATUS_INVALID_DEVICE_REQUEST;
+        irp->IoStatus.Information = 0;
         IoCompleteRequest(irp, IO_NO_INCREMENT);
         return STATUS_INVALID_DEVICE_REQUEST;
     }
@@ -39,10 +44,7 @@ static NTSTATUS DeviceControl(PDEVICE_OBJECT deviceObject, PIRP irp)
 
     // Resolve target process.
     PEPROCESS targetProcess = nullptr;
-    NTSTATUS status = PsLookupProcessByProcessId(
-        reinterpret_cast<HANDLE>(static_cast<uintptr_t>(cmd->Pid)),
-        &targetProcess);
-
+    NTSTATUS status = PsLookupProcessByProcessId(reinterpret_cast<HANDLE>(cmd->Pid), &targetProcess);
     if (!NT_SUCCESS(status)) {
         DbgPrint("[CheatStengine] PsLookupProcessByProcessId failed for PID %lu: 0x%08X\n",
             cmd->Pid, status);
@@ -129,19 +131,32 @@ static void DriverUnload(PDRIVER_OBJECT driverObject)
 {
     UNREFERENCED_PARAMETER(driverObject);
 
-    IoDeleteSymbolicLink(&g_SymLink);
-    IoDeleteDevice(g_DeviceObject);
+    NTSTATUS status = IoDeleteSymbolicLink(&g_SymLink);
+    if (!NT_SUCCESS(status)) {
+        DbgPrint("[CheatStengine] IoDeleteSymbolicLink failed: 0x%08X\n", status);
+        return;
+    }
+    IoDeleteDevice(driverObject->DeviceObject);
 
     DbgPrint("[CheatStengine] Driver unloaded.\n");
 }
 
-extern "C" NTSTATUS DriverEntry(PDRIVER_OBJECT driverObject, PUNICODE_STRING registryPath)
+NTSTATUS UnsupportedDispatch(PDEVICE_OBJECT driverObject, PIRP irp)
+{
+    UNREFERENCED_PARAMETER(driverObject);
+    irp->IoStatus.Status = STATUS_NOT_SUPPORTED;
+    IoCompleteRequest(irp, IO_NO_INCREMENT);
+    return irp->IoStatus.Status;
+}
+
+NTSTATUS InitializeDriver(PDRIVER_OBJECT driverObject, PUNICODE_STRING registryPath)
 {
     DbgPrint("[CheatStengine] DriverEntry.\n");
 
     RtlInitUnicodeString(&g_DevName, L"\\Device\\CheatStengineDriver");
     RtlInitUnicodeString(&g_SymLink, L"\\DosDevices\\CheatStengineDriver");
 
+    PDEVICE_OBJECT deviceObject = nullptr;
     NTSTATUS status = IoCreateDevice(
         driverObject,
         0,
@@ -149,7 +164,7 @@ extern "C" NTSTATUS DriverEntry(PDRIVER_OBJECT driverObject, PUNICODE_STRING reg
         FILE_DEVICE_UNKNOWN,
         FILE_DEVICE_SECURE_OPEN,
         FALSE,
-        &g_DeviceObject);
+        &deviceObject);
 
     if (!NT_SUCCESS(status)) {
         DbgPrint("[CheatStengine] IoCreateDevice failed: 0x%08X\n", status);
@@ -159,15 +174,29 @@ extern "C" NTSTATUS DriverEntry(PDRIVER_OBJECT driverObject, PUNICODE_STRING reg
     status = IoCreateSymbolicLink(&g_SymLink, &g_DevName);
     if (!NT_SUCCESS(status)) {
         DbgPrint("[CheatStengine] IoCreateSymbolicLink failed: 0x%08X\n", status);
-        IoDeleteDevice(g_DeviceObject);
+        IoDeleteDevice(deviceObject);
         return status;
     }
 
+    for (int i = 0; i <= IRP_MJ_MAXIMUM_FUNCTION; i++) {
+        driverObject->MajorFunction[i] = UnsupportedDispatch;
+    }
     driverObject->MajorFunction[IRP_MJ_CREATE] = CreateClose;
     driverObject->MajorFunction[IRP_MJ_CLOSE] = CreateClose;
     driverObject->MajorFunction[IRP_MJ_DEVICE_CONTROL] = DeviceControl;
     driverObject->DriverUnload = DriverUnload;
 
+    deviceObject->Flags |= DO_BUFFERED_IO;
+    deviceObject->Flags &= ~DO_DEVICE_INITIALIZING;
+
     DbgPrint("[CheatStengine] Driver loaded.\n");
     return STATUS_SUCCESS;
+}
+
+extern "C" NTSTATUS NTAPI IoCreateDriver(PUNICODE_STRING driverName, PDRIVER_INITIALIZE initializationFunction);
+extern "C" NTSTATUS DriverEntry(PDRIVER_OBJECT driverObject, PUNICODE_STRING registryPath)
+{
+    UNREFERENCED_PARAMETER(registryPath);
+    // return InitializeDriver(driverObject, registryPath);
+    return IoCreateDriver(nullptr, InitializeDriver);
 }
