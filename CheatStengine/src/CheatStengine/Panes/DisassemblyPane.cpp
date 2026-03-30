@@ -35,6 +35,17 @@ DisassemblyPane::DisassemblyPane(State& state, ModalManager& modalManager, Keybi
     m_KeybindManger.RegisterKeybind("Assemble",
         "Opens the assemble modal for the currently focused instruction",
         "Disassembly", ImGuiKey_A);
+    m_KeybindManger.RegisterKeybind("Go Back",
+        "Jumps back to the previous instruction before you jumped to another address",
+        "Disassembly", ImGuiKey_Escape, [this]() {
+            if (m_JumpHistory.empty()) {
+                return;
+            }
+            JumpPoint point = m_JumpHistory.top();
+            m_JumpHistory.pop();
+            FocusAddress(point.FocussedAddress);
+            m_SelectedAddress = point.SelectedAddress;
+        });
 }
 
 void DisassemblyPane::HandleKeybinds()
@@ -305,8 +316,9 @@ void DisassemblyPane::FocusAddress(uintptr_t address)
     }
 }
 
-void DisassemblyPane::SelectAddress(uintptr_t address)
+void DisassemblyPane::JumpToAddress(uintptr_t address)
 {
+    m_JumpHistory.emplace(m_FocussedAddress, m_SelectedAddress);
     FocusAddress(address);
     m_SelectedAddress = address;
 }
@@ -369,8 +381,7 @@ void DisassemblyPane::GotoAddressInput()
 
     uintptr_t address = result.Value;
     INFO("Going to address: 0x{:X}", address);
-    FocusAddress(address);
-    m_SelectedAddress = address;
+    JumpToAddress(address);
 }
 
 void DisassemblyPane::JumpToPointedInstruction(const zasm::Instruction& instr)
@@ -388,8 +399,7 @@ void DisassemblyPane::JumpToPointedInstruction(const zasm::Instruction& instr)
     }
 
     uintptr_t address = imm->value<uintptr_t>();
-    FocusAddress(address);
-    m_SelectedAddress = address;
+    JumpToAddress(address);
 }
 
 void DisassemblyPane::GotoAddressModal(const std::string& name, const std::any& payload)

@@ -8,6 +8,7 @@
 
 #include <CheatStengine/Core/KeybindManager.h>
 #include <map>
+#include <stack>
 #include <string>
 #include <vector>
 
@@ -35,7 +36,7 @@ public:
     void Draw(double deltaTime) override;
 
     void FocusAddress(uintptr_t address);
-    void SelectAddress(uintptr_t address);
+    void JumpToAddress(uintptr_t address);
 
 private:
     static void DrawFormattedInstruction(const FormattedInstruction& instr);
@@ -54,6 +55,13 @@ private:
     std::string m_AddressInput;
     uintptr_t m_FocussedAddress = 0;
     uintptr_t m_SelectedAddress = 0;
+
+    struct JumpPoint {
+        uintptr_t FocussedAddress;
+        uintptr_t SelectedAddress;
+    };
+
+    std::stack<JumpPoint> m_JumpHistory;
 
     std::map<uintptr_t, DisassemblyLine> m_Instructions;
 };

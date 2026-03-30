@@ -136,7 +136,7 @@ void PatternScannerPane::DrawPatternScanResults(PatternScan& patternScan) const
                 }
                 if (ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left)) {
                     DisassemblyPane& disassemblyPane = *m_MainLayer.GetPane<DisassemblyPane>();
-                    disassemblyPane.SelectAddress(result.Address);
+                    disassemblyPane.JumpToAddress(result.Address);
                     disassemblyPane.ForceFocus();
                 }
 
