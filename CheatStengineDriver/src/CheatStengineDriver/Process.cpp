@@ -22,24 +22,33 @@ NTSTATUS ReadProcessMemory(PEPROCESS process, uintptr_t address, void* buffer, s
     }
 
     if (!IsValidUserModeAddress(address, size)) {
+        DbgPrint("[CheatStengine] ReadProcessMemory: Invalid user mode address 0x%p\n",
+            reinterpret_cast<void*>(address));
         return STATUS_ACCESS_VIOLATION;
     }
 
     const UINT64 dtb = GetProcessCr3(process);
-
     if (IsPageNoAccess(dtb, address)) {
+        DbgPrint("[CheatStengine] ReadProcessMemory: Address 0x%p is marked as PAGE_NOACCESS\n",
+            reinterpret_cast<void*>(address));
         return STATUS_ACCESS_DENIED;
     }
 
     const UINT64 physAddr = TranslateLinear(dtb, address);
     if (!physAddr) {
+        DbgPrint("[CheatStengine] ReadProcessMemory: Failed to translate linear address 0x%p\n",
+            reinterpret_cast<void*>(address));
         return STATUS_UNSUCCESSFUL;
     }
 
     // Clamp to the end of the current physical page.
     const ULONG64 chunk = MIN(PAGE_SIZE - static_cast<INT32>(physAddr & 0xFFF), size);
     SIZE_T bytesRead = 0;
-    return PhysRead(reinterpret_cast<PVOID>(physAddr), buffer, chunk, &bytesRead);
+    NTSTATUS status = PhysRead(reinterpret_cast<PVOID>(physAddr), buffer, chunk, &bytesRead);
+    if (!NT_SUCCESS(status)) {
+        DbgPrint("[CheatStengine] PhysRead failed: 0x%08X\n", status);
+    }
+    return status;
 }
 
 NTSTATUS WriteProcessMemory(PEPROCESS process, uintptr_t address, void* buffer, size_t size)
@@ -56,7 +65,6 @@ NTSTATUS WriteProcessMemory(PEPROCESS process, uintptr_t address, void* buffer, 
     }
 
     const UINT64 dtb = GetProcessCr3(process);
-
     if (IsPageNoAccess(dtb, address)) {
         return STATUS_ACCESS_DENIED;
     }
@@ -68,7 +76,11 @@ NTSTATUS WriteProcessMemory(PEPROCESS process, uintptr_t address, void* buffer, 
 
     const ULONG64 chunk = MIN(PAGE_SIZE - static_cast<INT32>(physAddr & 0xFFF), size);
     SIZE_T bytesWritten = 0;
-    return PhysWrite(reinterpret_cast<PVOID>(physAddr), buffer, chunk, &bytesWritten);
+    NTSTATUS status = PhysWrite(reinterpret_cast<PVOID>(physAddr), buffer, chunk, &bytesWritten);
+    if (!NT_SUCCESS(status)) {
+        DbgPrint("[CheatStengine] PhysWrite failed: 0x%08X\n", status);
+    }
+    return status;
 }
 
 NTSTATUS QueryProcessMemory(PEPROCESS process, uintptr_t address, MEMORY_BASIC_INFORMATION* mbi)
@@ -106,6 +118,9 @@ NTSTATUS QueryProcessMemory(PEPROCESS process, uintptr_t address, MEMORY_BASIC_I
     }
     KeUnstackDetachProcess(&apcState);
 
+    DbgPrint("[CheatStengine] ZwQueryVirtualMemory returned 0x%08X, BaseAddress=0x%p, RegionSize=0x%p, State=0x%X, Protect=0x%X, Type=0x%X\n",
+        status, mbi->BaseAddress, reinterpret_cast<void*>(mbi->RegionSize), mbi->State, mbi->Protect, mbi->Type);
+
     if (!NT_SUCCESS(status)) {
         DbgPrint("[CheatStengine] ZwQueryVirtualMemory failed: 0x%08X\n", status);
     }
@@ -141,6 +156,8 @@ NTSTATUS AllocateProcessMemory(PEPROCESS process, uintptr_t address, size_t size
 
     if (NT_SUCCESS(status)) {
         *outAddress = reinterpret_cast<uintptr_t>(baseAddress);
+    } else {
+        DbgPrint("[CheatStengine] ZwAllocateVirtualMemory failed: 0x%08X\n", status);
     }
     return status;
 }
@@ -169,6 +186,9 @@ NTSTATUS FreeProcessMemory(PEPROCESS process, uintptr_t address, size_t size, ui
     }
     KeUnstackDetachProcess(&apcState);
 
+    if (!NT_SUCCESS(status)) {
+        DbgPrint("[CheatStengine] ZwFreeVirtualMemory failed: 0x%08X\n", status);
+    }
     return status;
 }
 
@@ -205,5 +225,8 @@ NTSTATUS ProtectProcessMemory(PEPROCESS process, uintptr_t address, size_t size,
     }
     KeUnstackDetachProcess(&apcState);
 
+    if (!NT_SUCCESS(status)) {
+        DbgPrint("[CheatStengine] ZwProtectVirtualMemory failed: 0x%08X\n", status);
+    }
     return status;
 }
