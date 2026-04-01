@@ -21,6 +21,7 @@ public:
     [[nodiscard]] std::vector<MODULEENTRY32> GetModuleEntries(bool refresh = false) const override;
 
     [[nodiscard]] std::string GetName() override;
+    [[nodiscard]] bool IsValid() const override { return Process::IsValid() && m_Handle != INVALID_HANDLE_VALUE; }
 
 private:
     HANDLE m_Handle = nullptr;

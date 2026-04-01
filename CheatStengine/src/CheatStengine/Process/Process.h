@@ -97,14 +97,14 @@ public:
 
     [[nodiscard]] uintptr_t GetModuleProc(uintptr_t moduleBase, const std::string& functionName) const;
 
-    [[nodiscard]] bool IsValid() const { return m_Pid > 0; }
+    [[nodiscard]] virtual bool IsValid() const { return m_Pid > 0; }
     [[nodiscard]] uint32_t GetPid() const { return m_Pid; }
 
     static std::vector<PROCESSENTRY32> EnumerateProcesses();
     static std::vector<Window> EnumerateWindows();
     static std::vector<Window> EnumerateApplications();
-    static std::unique_ptr<Process> Create(DWORD pid, ProcessMode mode = ProcessMode::WinAPI);
-    static std::unique_ptr<Process> Create(const std::string& procName, ProcessMode mode = ProcessMode::WinAPI);
+    static std::unique_ptr<Process> Create(DWORD pid, ProcessMode mode);
+    static std::unique_ptr<Process> Create(const std::string& procName, ProcessMode mode);
 
 protected:
     DWORD m_Pid = 0;
