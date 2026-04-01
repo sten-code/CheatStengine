@@ -16,6 +16,37 @@
 
 #include <format>
 
+static std::string FormatProtectionFlags(DWORD protection)
+{
+    std::string result;
+
+    // Access flags
+    if (protection & PAGE_NOACCESS) result += "NOACCESS ";
+    if (protection & PAGE_READONLY) result += "R ";
+    if (protection & PAGE_READWRITE) result += "RW ";
+    if (protection & PAGE_WRITECOPY) result += "WRITECOPY ";
+    if (protection & PAGE_EXECUTE) result += "X ";
+    if (protection & PAGE_EXECUTE_READ) result += "RX ";
+    if (protection & PAGE_EXECUTE_READWRITE) result += "RWX ";
+    if (protection & PAGE_EXECUTE_WRITECOPY) result += "EXECUTE_WRITECOPY ";
+
+    // Type flags
+    if (protection & PAGE_GUARD) result += "GUARD ";
+    if (protection & PAGE_NOCACHE) result += "NOCACHE ";
+    if (protection & PAGE_WRITECOMBINE) result += "WRITECOMBINE ";
+
+    if (result.empty()) {
+        result = "Unknown";
+    }
+
+    // Trim trailing space
+    if (!result.empty() && result.back() == ' ') {
+        result.pop_back();
+    }
+
+    return result;
+}
+
 DisassemblyPane::DisassemblyPane(State& state, ModalManager& modalManager, KeybindManager& keybindManager)
     : Pane(ICON_MDI_HAMMER_WRENCH " Disassembly", state)
     , m_Decoder(zasm::MachineMode::AMD64)
@@ -135,40 +166,27 @@ void DisassemblyPane::AnalyzePage(uintptr_t pageAddr, size_t pageSize)
     }
 }
 
-void DisassemblyPane::Draw(double deltaTime)
+void DisassemblyPane::HandleScrolling()
 {
-    static double accumulator = 0.0;
-    accumulator += deltaTime;
-    if (accumulator >= 1.0) {
-        Analyze(m_FocussedAddress);
-        accumulator = 0.0;
-    }
-
-    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2 { 0.0f, 0.0f });
-    ImGui::Begin(m_Name.c_str(), &m_Open);
-    ImGui::PopStyleVar();
-
-    HandleKeybinds();
-
-    ImGui::BeginChild("ScrollingRegion", ImVec2 { 0.0f, 0.0f }, ImGuiChildFlags_None, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
-    if (ImGui::IsWindowHovered()) {
-        int64_t scrollWheel = ImGui::GetIO().MouseWheel;
-        if (scrollWheel > 0 && m_FocussedAddress > 0) {
-            if (auto it = m_Instructions.lower_bound(m_FocussedAddress); it != m_Instructions.begin()) {
-                FocusAddress((--it)->first);
-            } else if (m_FocussedAddress > 0) {
-                m_FocussedAddress--;
-            }
-        } else if (scrollWheel < 0) {
-            if (auto it = m_Instructions.upper_bound(m_FocussedAddress); it != m_Instructions.end()
-                && m_Instructions.contains(m_FocussedAddress)) {
-                FocusAddress(it->first);
-            } else {
-                m_FocussedAddress++;
-            }
+    int64_t scrollWheel = ImGui::GetIO().MouseWheel;
+    if (scrollWheel > 0 && m_FocussedAddress > 0) {
+        if (auto it = m_Instructions.lower_bound(m_FocussedAddress); it != m_Instructions.begin()) {
+            FocusAddress((--it)->first);
+        } else if (m_FocussedAddress > 0) {
+            m_FocussedAddress--;
+        }
+    } else if (scrollWheel < 0) {
+        if (auto it = m_Instructions.upper_bound(m_FocussedAddress); it != m_Instructions.end()
+            && m_Instructions.contains(m_FocussedAddress)) {
+            FocusAddress(it->first);
+        } else {
+            m_FocussedAddress++;
         }
     }
+}
 
+void DisassemblyPane::DrawDisassembly()
+{
     size_t visibleInstructionCount = ImGui::GetContentRegionAvail().y / ImGui::GetTextLineHeightWithSpacing() + 1;
 
     Fonts::Push(Fonts::Type::JetBrainsMono);
@@ -198,14 +216,7 @@ void DisassemblyPane::Draw(double deltaTime)
             uintptr_t instructionAddress = currentAddress;
             std::optional<MODULEENTRY32> modEntry = Utils::GetModuleForAddress(currentAddress, m_State.Modules);
             if (!m_Instructions.contains(currentAddress)) {
-                ImGui::TableSetColumnIndex(0);
-                if (modEntry) {
-                    ImGui::Text("%s+0x%llX", modEntry->szModule, currentAddress - reinterpret_cast<uintptr_t>(modEntry->modBaseAddr));
-                } else {
-                    ImGui::Text("0x%012llX", currentAddress);
-                }
-                ImGui::TableSetColumnIndex(2);
-                ImGui::Text("??");
+                DrawDisassemblyRowUnknown(currentAddress, modEntry);
                 currentAddress++;
             } else {
                 const DisassemblyLine& line = m_Instructions[currentAddress];
@@ -305,8 +316,61 @@ void DisassemblyPane::Draw(double deltaTime)
         ImGui::EndTable();
     }
     Fonts::Pop();
+}
+
+void DisassemblyPane::DrawStatusBar()
+{
+    Fonts::Push(Fonts::Type::JetBrainsMono);
+    ImGui::Separator();
+    std::string protectionStr = "N/A";
+    if (std::optional<MEMORY_BASIC_INFORMATION> mbi = m_State.Process->Query(m_SelectedAddress)) {
+        protectionStr = FormatProtectionFlags(mbi->Protect);
+    }
+    ImGui::Text("Selected Address: 0x%012llX Protect: %s", m_SelectedAddress, protectionStr);
+    Fonts::Pop();
+}
+
+void DisassemblyPane::DrawDisassemblyRowUnknown(uintptr_t address, std::optional<MODULEENTRY32> modEntry)
+{
+    ImGui::TableSetColumnIndex(0);
+    if (modEntry) {
+        ImGui::Text("%s+0x%llX", modEntry->szModule, address - reinterpret_cast<uintptr_t>(modEntry->modBaseAddr));
+    } else {
+        ImGui::Text("0x%012llX", address);
+    }
+    ImGui::TableSetColumnIndex(2);
+    ImGui::Text("??");
+}
+
+void DisassemblyPane::Draw(double deltaTime)
+{
+    static double accumulator = 0.0;
+    accumulator += deltaTime;
+    if (accumulator >= 1.0) {
+        Analyze(m_FocussedAddress);
+        accumulator = 0.0;
+    }
+
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2 { 0.0f, 0.0f });
+    ImGui::Begin(m_Name.c_str(), &m_Open);
+    ImGui::PopStyleVar();
+
+    HandleKeybinds();
+
+    float statusBarHeight = ImGui::GetFrameHeightWithSpacing();
+    ImVec2 contentSize = ImGui::GetContentRegionAvail();
+    contentSize.y -= statusBarHeight;
+
+    ImGui::BeginChild("ScrollingRegion", contentSize, ImGuiChildFlags_None, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
+
+    if (ImGui::IsWindowHovered()) {
+        HandleScrolling();
+    }
+    DrawDisassembly();
 
     ImGui::EndChild();
+
+    DrawStatusBar();
 
     ImGui::End();
 }

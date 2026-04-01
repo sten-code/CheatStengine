@@ -41,6 +41,12 @@ public:
 private:
     static void DrawFormattedInstruction(const FormattedInstruction& instr);
 
+    void HandleScrolling();
+    void DrawDisassembly();
+    void DrawStatusBar();
+
+    void DrawDisassemblyRowUnknown(uintptr_t address, std::optional<MODULEENTRY32> modEntry);
+
     void GotoAddressInput();
     void JumpToPointedInstruction(const zasm::Instruction& instr);
 
