@@ -10,6 +10,9 @@
 #include <CheatStengine/Panes/PatternScannerPane.h>
 #include <CheatStengine/Panes/StructDissectPane.h>
 #include <CheatStengine/Panes/WatchPane.h>
+#include <CheatStengine/Settings/ComboSetting.h>
+#include <CheatStengine/Settings/SliderSetting.h>
+#include <CheatStengine/Settings/ToggleSetting.h>
 #include <Engine/Core/Application.h>
 
 #include <IconsMaterialDesignIcons.h>
@@ -18,15 +21,24 @@
 
 #include <algorithm>
 
+DEFINE_ENUM_SETTING(ProcessMode,
+    { ProcessMode::WinAPI, "WinAPI" },
+    { ProcessMode::Kernel, "Kernel" });
+
 MainLayer::MainLayer(Window& window)
     : Layer("MainLayer")
     , m_Window(window)
     , m_MenuBar(*this)
     , m_TitleBar(window, m_State)
 {
-    m_State.Process = Process::Create("RobloxPlayerBeta.exe");
+    SettingsCategory& general = m_SettingsManager.AddCategory("General");
+    m_ProcessModeSetting = general.AddSetting<EnumSetting<ProcessMode>>("Process Mode", "What should be used to interact with processes?", ProcessMode::WinAPI);
+
+    // Register modals
+    m_ModalManager.RegisterModal("Settings", BIND_FN(MainLayer::SettingsModal));
     m_ModalManager.RegisterModal("Open Process", BIND_FN(MainLayer::OpenProcessModal));
 
+    // Create panes
     AddPane<ModulesPane>(m_State);
     AddPane<WatchPane>(m_State, m_ModalManager);
     AddPane<MemoryScannerPane>(m_State);
@@ -36,6 +48,9 @@ MainLayer::MainLayer(Window& window)
     AddPane<PEViewer>(m_State);
     StructDissectPane& structDissectPane = AddPane<StructDissectPane>(m_State, m_ModalManager, m_KeybindManager);
 
+    m_State.Process = Process::Create("RobloxPlayerBeta.exe", m_ProcessModeSetting->GetValue());
+
+    // Add some default dissections for Roblox
     if (AddressEvaluator::Result result = AddressEvaluator::Evaluate("robloxplayerbeta.exe+0x795A0D8", *m_State.Process);
         !result.IsError()) {
         structDissectPane.AddDissection("FakeDataModel", result.Value);
@@ -94,6 +109,14 @@ void MainLayer::OnImGuiRenderDock()
 
 void MainLayer::OnEvent(Event& event)
 {
+}
+
+void MainLayer::OpenProcess(uint32_t pid)
+{
+    m_State.Process = Process::Create(pid, m_ProcessModeSetting->GetValue());
+    if (m_State.Process->IsValid()) {
+        m_State.Modules = m_State.Process->GetModuleEntries();
+    }
 }
 
 void MainLayer::OpenProcessModal(const std::string& name, const std::any& payload)
@@ -155,8 +178,7 @@ void MainLayer::DrawOpenProcessList()
             ImGui::PushID(static_cast<int>(i));
 
             if (ImGui::Selectable(proc.szExeFile)) {
-                m_State.Process = Process::Create(proc.th32ProcessID);
-                m_State.Modules = m_State.Process->GetModuleEntries();
+                OpenProcess(proc.th32ProcessID);
                 ImGui::CloseCurrentPopup();
             }
 
@@ -192,8 +214,7 @@ void MainLayer::DrawOpenWindowList()
             ImGui::PushID(static_cast<int>(i));
 
             if (ImGui::Selectable(window.Title.c_str())) {
-                m_State.Process = Process::Create(window.Pid);
-                m_State.Modules = m_State.Process->GetModuleEntries();
+                OpenProcess(window.Pid);
                 ImGui::CloseCurrentPopup();
             }
 
@@ -202,4 +223,9 @@ void MainLayer::DrawOpenWindowList()
         ImGui::EndListBox();
     }
     ImGui::PopStyleColor();
+}
+
+void MainLayer::SettingsModal(const std::string& name, const std::any& payload)
+{
+    m_SettingsManager.DrawSettingsPopup(name);
 }

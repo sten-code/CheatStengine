@@ -3,6 +3,8 @@
 #include <CheatStengine/Core/KeybindManager.h>
 #include <CheatStengine/Core/ModalManager.h>
 #include <CheatStengine/Panes/Pane.h>
+#include <CheatStengine/Settings/EnumSetting.h>
+#include <CheatStengine/Settings/SettingsManager.h>
 #include <CheatStengine/UI/MenuBar.h>
 #include <CheatStengine/UI/TitleBar.h>
 #include <Engine/Core/Layers/Layer.h>
@@ -18,9 +20,7 @@ public:
     void OnImGuiRenderDock() override;
     void OnEvent(Event& event) override;
 
-    void OpenProcessModal(const std::string& name, const std::any& payload);
-    void DrawOpenProcessList();
-    void DrawOpenWindowList();
+    void OpenProcess(uint32_t pid);
 
     template <typename T>
     [[nodiscard]] T* GetPane() const;
@@ -37,18 +37,31 @@ public:
     [[nodiscard]] const KeybindManager& GetKeybindManager() const { return m_KeybindManager; }
 
 private:
+    void OpenProcessModal(const std::string& name, const std::any& payload);
+    void DrawOpenProcessList();
+    void DrawOpenWindowList();
+
+    void SettingsModal(const std::string& name, const std::any& payload);
+
+private:
     Window& m_Window;
 
     State m_State;
+    std::vector<std::unique_ptr<Pane>> m_Panes;
+
+    // Managers
     ModalManager m_ModalManager;
     KeybindManager m_KeybindManager;
-    std::vector<std::unique_ptr<Pane>> m_Panes;
+    SettingsManager m_SettingsManager;
 
     MenuBar m_MenuBar;
     TitleBar m_TitleBar;
 
     std::vector<PROCESSENTRY32> m_ProcessEntries;
     std::vector<Process::Window> m_WindowEntries;
+
+    // Settings
+    EnumSetting<ProcessMode>* m_ProcessModeSetting;
 
     friend class MenuBar;
     friend class DisassemblyPane;

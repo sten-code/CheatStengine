@@ -8,6 +8,7 @@
 #include <CheatStengine/UI/TitleBar.h>
 #include <Engine/Core/Application.h>
 
+#include <CheatStengine/Settings/Setting.h>
 #include <IconsFontAwesome6.h>
 #include <IconsMaterialDesignIcons.h>
 #include <imgui.h>
@@ -58,6 +59,10 @@ void MenuBar::Draw()
                 m_ModalManager.OpenModal("Open Process");
             }
             Fonts::Pop();
+
+            if (ImGui::RoundedMenuItemEx("Settings", ICON_MDI_COG, m_KeybindManager.GetKeybindString("Settings").c_str())) {
+                m_ModalManager.OpenModal("Settings");
+            }
 
             ImGui::PopStyleVar();
             ImGui::EndMenu();
