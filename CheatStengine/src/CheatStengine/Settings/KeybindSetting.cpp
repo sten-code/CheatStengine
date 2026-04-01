@@ -1,5 +1,9 @@
 #include "KeybindSetting.h"
 
+#include <CheatStengine/UI/ImGui/Fonts.h>
+
+#include <IconsMaterialDesignIcons.h>
+
 KeyChord::KeyChord(ImGuiKeyChord chord)
 {
     Ctrl = chord & ImGuiMod_Ctrl;
@@ -57,7 +61,7 @@ void KeybindSetting::Draw()
     ImGui::SameLine(ImGui::GetWindowWidth() * 0.6f);
 
     std::string buttonText = m_WaitingForInput ? "Press any key..." : m_TempValue.ToString();
-    if (ImGui::Button(buttonText.c_str(), ImVec2(ImGui::GetContentRegionAvail().x - 30.0f, 0))) {
+    if (ImGui::Button(buttonText.c_str(), ImVec2(ImGui::GetContentRegionAvail().x - ImGui::GetFrameHeight() - 10, 0))) {
         m_WaitingForInput = true;
     }
 
@@ -67,10 +71,12 @@ void KeybindSetting::Draw()
 
     ImGui::SameLine(0, 5);
 
-    if (ImGui::Button("X", ImVec2(25, 0))) {
+    Fonts::Push(Fonts::Type::MaterialDesignIcons);
+    if (ImGui::Button(ICON_MDI_CLOSE, ImVec2(ImGui::GetFrameHeight() + 5, ImGui::GetFrameHeight()))) {
         m_TempValue = KeyChord {};
         m_WaitingForInput = false;
     }
+    Fonts::Pop();
 
     ImGui::EndGroup();
     ImGui::PopID();
