@@ -80,15 +80,18 @@ void DisassemblyPane::HandleKeybinds()
 
 void DisassemblyPane::Analyze(uintptr_t address)
 {
-    std::optional<MEMORY_BASIC_INFORMATION> mbi = m_State.Process->Query(address);
-    if (!mbi) {
+    if (!m_State.Process->IsValid()) {
         return;
     }
-    if (mbi->Protect & PAGE_NOACCESS) {
-        return;
-    }
+    // std::optional<MEMORY_BASIC_INFORMATION> mbi = m_State.Process->Query(address);
+    // if (!mbi) {
+    //     return;
+    // }
+    // if (mbi->Protect & PAGE_NOACCESS) {
+    //     return;
+    // }
 
-    uintptr_t start = reinterpret_cast<uintptr_t>(mbi->BaseAddress);
+    uintptr_t start = address & ~0xFFF;
     INFO("Analyzing Address: 0x{:X}", address);
     INFO("  Start: 0x{:X}, Size: 0x{:X}", start, 0x1000);
     AnalyzePage(start, 0x1000);
@@ -111,7 +114,7 @@ void DisassemblyPane::AnalyzePage(uintptr_t pageAddr, size_t pageSize)
         }
 
         zasm::InstructionDetail& detail = res.value();
-        zasm::Mem* mem0 = detail.getOperand(0).getIf<zasm::Mem>();
+        const zasm::Mem* mem0 = detail.getOperand(0).getIf<zasm::Mem>();
         if (mem0 && static_cast<ZydisRegister>(mem0->getBase().getId()) == ZYDIS_REGISTER_RIP && mem0->getDisplacement() == pageAddr + bytesDecoded + detail.getLength()) {
             uint64_t targetAddr = *reinterpret_cast<uint64_t*>(code.data() + bytesDecoded + detail.getLength());
             detail = zasm::InstructionDetail(
