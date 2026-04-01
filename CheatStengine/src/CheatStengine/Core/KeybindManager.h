@@ -9,11 +9,9 @@
 #include <unordered_map>
 #include <vector>
 
-class Keybind {
-public:
+struct Keybind {
     std::string Name;
     std::string Description;
-    std::string Category;
     ImGuiKeyChord KeyChord;
     std::function<void()> Callback;
 };
@@ -33,7 +31,7 @@ public:
         Keybind& keybind = m_Keybinds.emplace(
                                          std::piecewise_construct,
                                          std::forward_as_tuple(name),
-                                         std::forward_as_tuple(name, description, category, keyChord, callback))
+                                         std::forward_as_tuple(name, description, keyChord, callback))
                                .first->second;
         m_KeybindsByCategory[category].push_back(&keybind);
     }

@@ -11,6 +11,7 @@
 #include <CheatStengine/Panes/StructDissectPane.h>
 #include <CheatStengine/Panes/WatchPane.h>
 #include <CheatStengine/Settings/ComboSetting.h>
+#include <CheatStengine/Settings/KeybindSetting.h>
 #include <CheatStengine/Settings/SliderSetting.h>
 #include <CheatStengine/Settings/ToggleSetting.h>
 #include <Engine/Core/Application.h>
@@ -38,6 +39,11 @@ MainLayer::MainLayer(Window& window)
     m_ModalManager.RegisterModal("Settings", BIND_FN(MainLayer::SettingsModal));
     m_ModalManager.RegisterModal("Open Process", BIND_FN(MainLayer::OpenProcessModal));
 
+    // Keybinds
+    m_KeybindManager.RegisterKeybind("Settings", "Opens the settings menu", "Global", ImGuiMod_Ctrl | ImGuiKey_Comma, [this]() {
+        m_ModalManager.OpenModal("Settings");
+    });
+
     // Create panes
     AddPane<ModulesPane>(m_State);
     AddPane<WatchPane>(m_State, m_ModalManager);
@@ -48,6 +54,19 @@ MainLayer::MainLayer(Window& window)
     AddPane<PEViewer>(m_State);
     StructDissectPane& structDissectPane = AddPane<StructDissectPane>(m_State, m_ModalManager, m_KeybindManager);
 
+    SettingsCategory& keybindsSettings = m_SettingsManager.AddCategory("Keybinds");
+    std::vector<std::string> keybindCategories = m_KeybindManager.GetCategories();
+    for (const std::string& category : keybindCategories) {
+        SettingsCategory& subCatagory = keybindsSettings.AddSubCategory(category);
+        std::vector<Keybind*> keybindsInCategory = m_KeybindManager.GetKeybindsInCategory(category);
+        for (Keybind* keybind : keybindsInCategory) {
+            subCatagory.AddSetting<KeybindSetting>(keybind->Name, keybind->Description, keybind->KeyChord, [keybind](KeyChord keyChord) {
+                keybind->KeyChord = static_cast<ImGuiKeyChord>(keyChord);
+            });
+        }
+    }
+
+    // Testing shit
     m_State.Process = Process::Create("RobloxPlayerBeta.exe", m_ProcessModeSetting->GetValue());
 
     // Add some default dissections for Roblox

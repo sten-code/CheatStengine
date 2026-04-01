@@ -7,6 +7,12 @@ public:
     explicit SettingsCategory(std::string name)
         : m_Name(std::move(name)) {}
 
+    SettingsCategory& AddSubCategory(std::string name)
+    {
+        m_SubCategories.emplace_back(std::move(name));
+        return m_SubCategories.back();
+    }
+
     template <typename T, typename... Args>
     T* AddSetting(Args&&... args)
     {
@@ -16,21 +22,38 @@ public:
         return ptr;
     }
 
-    void Draw() const
+    void Draw(bool drawHeader = false) const
     {
-        if (ImGui::BeginChild(("##" + m_Name).c_str(), ImVec2(0, 0), true, ImGuiWindowFlags_NoScrollbar)) {
-            for (auto& setting : m_Settings) {
-                setting->Draw();
+        if (drawHeader) {
+            ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(200, 200, 200, 255));
+            ImGui::TextUnformatted(m_Name.c_str());
+            ImGui::PopStyleColor();
+            ImGui::Separator();
+            ImGui::Spacing();
+        }
+
+        for (const std::unique_ptr<Setting>& setting : m_Settings) {
+            setting->Draw();
+            ImGui::Spacing();
+        }
+
+        if (!m_SubCategories.empty()) {
+            ImGui::Indent(20.0f);
+            for (const SettingsCategory& subCategory : m_SubCategories) {
+                subCategory.Draw(true);
                 ImGui::Spacing();
             }
+            ImGui::Unindent(20.0f);
         }
-        ImGui::EndChild();
     }
 
     void Restore() const
     {
         for (const std::unique_ptr<Setting>& setting : m_Settings) {
             setting->Restore();
+        }
+        for (const SettingsCategory& subCategory : m_SubCategories) {
+            subCategory.Restore();
         }
     }
 
@@ -39,6 +62,9 @@ public:
         for (const std::unique_ptr<Setting>& setting : m_Settings) {
             setting->Apply();
         }
+        for (const SettingsCategory& subCategory : m_SubCategories) {
+            subCategory.Apply();
+        }
     }
 
     [[nodiscard]] const std::string& GetName() const { return m_Name; }
@@ -46,6 +72,11 @@ public:
     {
         for (const std::unique_ptr<Setting>& setting : m_Settings) {
             if (setting->HasValueChanged()) {
+                return true;
+            }
+        }
+        for (const SettingsCategory& subCategory : m_SubCategories) {
+            if (subCategory.HasValueChanged()) {
                 return true;
             }
         }
@@ -66,4 +97,5 @@ public:
 private:
     std::string m_Name;
     std::vector<std::unique_ptr<Setting>> m_Settings;
+    std::vector<SettingsCategory> m_SubCategories;
 };
