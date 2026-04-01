@@ -4,6 +4,9 @@
 
 #include <imgui.h>
 
+#include <functional>
+#include <string>
+
 struct KeyChord {
     ImGuiKey Key = ImGuiKey_None;
     bool Ctrl = false;
@@ -13,57 +16,21 @@ struct KeyChord {
 
     KeyChord() = default;
 
-    KeyChord(ImGuiKey key, bool ctrl = false, bool shift = false, bool alt = false, bool super = false)
+    explicit KeyChord(ImGuiKey key, bool ctrl = false, bool shift = false, bool alt = false, bool super = false)
         : Key(key), Ctrl(ctrl), Shift(shift), Alt(alt), Super(super) {}
 
-    KeyChord(ImGuiKeyChord chord)
-    {
-        Ctrl = chord & ImGuiMod_Ctrl;
-        Shift = chord & ImGuiMod_Shift;
-        Alt = chord & ImGuiMod_Alt;
-        Super = chord & ImGuiMod_Super;
-        Key = static_cast<ImGuiKey>(chord & ~ImGuiMod_Mask_);
-    }
+    explicit KeyChord(ImGuiKeyChord chord);
 
-    operator ImGuiKeyChord() const
-    {
-        ImGuiKeyChord chord = static_cast<ImGuiKeyChord>(Key);
-        if (Ctrl) chord |= ImGuiMod_Ctrl;
-        if (Shift) chord |= ImGuiMod_Shift;
-        if (Alt) chord |= ImGuiMod_Alt;
-        if (Super) chord |= ImGuiMod_Super;
-        return chord;
-    }
+    explicit operator ImGuiKeyChord() const;
 
-    std::string ToString() const
-    {
-        if (Key == ImGuiKey_None) return "None";
-
-        std::string result;
-        if (Ctrl) result += "Ctrl+";
-        if (Shift) result += "Shift+";
-        if (Alt) result += "Alt+";
-        if (Super) result += "Super+";
-
-        const char* keyName = ImGui::GetKeyName(Key);
-        if (keyName) {
-            result += keyName;
-        } else {
-            result += "Unknown";
-        }
-
-        return result;
-    }
+    std::string ToString() const;
 
     bool operator==(const KeyChord& other) const
     {
         return Key == other.Key && Ctrl == other.Ctrl && Shift == other.Shift && Alt == other.Alt && Super == other.Super;
     }
 
-    bool operator!=(const KeyChord& other) const
-    {
-        return !(*this == other);
-    }
+    bool operator!=(const KeyChord& other) const { return !(*this == other); }
 };
 
 class KeybindSetting final : public Setting {
@@ -88,42 +55,7 @@ public:
     {
     }
 
-    void Draw() override
-    {
-        ImGui::PushID(m_Name.c_str());
-        ImGui::BeginGroup();
-
-        ImGui::TextUnformatted(m_Name.c_str());
-
-        if (ImGui::IsItemHovered() && !m_Description.empty()) {
-            ImGui::BeginTooltip();
-            ImGui::PushTextWrapPos(ImGui::GetFontSize() * 35.0f);
-            ImGui::TextUnformatted(m_Description.c_str());
-            ImGui::PopTextWrapPos();
-            ImGui::EndTooltip();
-        }
-
-        ImGui::SameLine(ImGui::GetWindowWidth() * 0.6f);
-
-        std::string buttonText = m_WaitingForInput ? "Press any key..." : m_TempValue.ToString();
-        if (ImGui::Button(buttonText.c_str(), ImVec2(ImGui::GetContentRegionAvail().x - 30.0f, 0))) {
-            m_WaitingForInput = true;
-        }
-
-        if (m_WaitingForInput) {
-            HandleKeyInput();
-        }
-
-        ImGui::SameLine(0, 5);
-
-        if (ImGui::Button("X", ImVec2(25, 0))) {
-            m_TempValue = KeyChord {};
-            m_WaitingForInput = false;
-        }
-
-        ImGui::EndGroup();
-        ImGui::PopID();
-    }
+    void Draw() override;
 
     void Restore() override
     {
@@ -151,56 +83,10 @@ public:
         m_TempValue = value;
     }
 
-    void SetCallback(std::function<void(KeyChord)> callback)
-    {
-        m_Callback = std::move(callback);
-    }
-
-    bool IsPressed() const
-    {
-        if (m_Value.Key == ImGuiKey_None) {
-            return false;
-        }
-
-        bool ctrlDown = (m_Value.Ctrl && ImGui::GetIO().KeyCtrl) || (!m_Value.Ctrl && !ImGui::GetIO().KeyCtrl);
-        bool shiftDown = (m_Value.Shift && ImGui::GetIO().KeyShift) || (!m_Value.Shift && !ImGui::GetIO().KeyShift);
-        bool altDown = (m_Value.Alt && ImGui::GetIO().KeyAlt) || (!m_Value.Alt && !ImGui::GetIO().KeyAlt);
-        bool superDown = (m_Value.Super && ImGui::GetIO().KeySuper) || (!m_Value.Super && !ImGui::GetIO().KeySuper);
-
-        return ctrlDown && shiftDown && altDown && superDown && ImGui::IsKeyPressed(m_Value.Key);
-    }
+    bool IsPressed() const;
 
 private:
-    void HandleKeyInput()
-    {
-        ImGuiIO& io = ImGui::GetIO();
-
-        bool ctrl = io.KeyCtrl;
-        bool shift = io.KeyShift;
-        bool alt = io.KeyAlt;
-        bool super = io.KeySuper;
-
-        for (int k = ImGuiKey_NamedKey_BEGIN; k < ImGuiKey_NamedKey_END; k++) {
-            ImGuiKey key = static_cast<ImGuiKey>(k);
-            if (ImGui::IsKeyPressed(key)) {
-                // Don't capture modifier keys alone
-                if (k == ImGuiKey_LeftCtrl || k == ImGuiKey_LeftShift || k == ImGuiKey_LeftAlt || k == ImGuiKey_LeftSuper
-                    || k == ImGuiKey_RightCtrl || k == ImGuiKey_RightShift || k == ImGuiKey_RightAlt || k == ImGuiKey_RightSuper
-                    || k == ImGuiKey_ReservedForModCtrl || k == ImGuiKey_ReservedForModShift || k == ImGuiKey_ReservedForModAlt || k == ImGuiKey_ReservedForModSuper) {
-                    continue;
-                }
-
-                m_TempValue = KeyChord(key, ctrl, shift, alt, super);
-                m_WaitingForInput = false;
-                return;
-            }
-        }
-
-        // Escape cancels
-        if (ImGui::IsKeyPressed(ImGuiKey_Escape)) {
-            m_WaitingForInput = false;
-        }
-    }
+    void HandleKeyInput();
 
 private:
     std::string m_Name;

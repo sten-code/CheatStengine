@@ -60,7 +60,7 @@ MainLayer::MainLayer(Window& window)
         SettingsCategory& subCatagory = keybindsSettings.AddSubCategory(category);
         std::vector<Keybind*> keybindsInCategory = m_KeybindManager.GetKeybindsInCategory(category);
         for (Keybind* keybind : keybindsInCategory) {
-            subCatagory.AddSetting<KeybindSetting>(keybind->Name, keybind->Description, keybind->KeyChord, [keybind](KeyChord keyChord) {
+            subCatagory.AddSetting<KeybindSetting>(keybind->Name, keybind->Description, static_cast<KeyChord>(keybind->KeyChord), [keybind](KeyChord keyChord) {
                 keybind->KeyChord = static_cast<ImGuiKeyChord>(keyChord);
             });
         }
