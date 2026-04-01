@@ -20,6 +20,12 @@ public:
         ImGui::SetNextWindowPos(ImGui::GetMainViewport()->GetCenter(), ImGuiCond_Appearing, ImVec2 { 0.5f, 0.5f });
         ImGui::SetNextWindowSize(ImVec2 { 600, 500 }, ImGuiCond_Appearing);
         if (ImGui::BeginPopupModal(name.c_str(), nullptr)) {
+            if (ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows)
+                && ImGui::IsKeyPressed(ImGuiKey_Escape)) {
+                Restore();
+                ImGui::CloseCurrentPopup();
+            }
+
             if (ImGui::BeginChild("SettingsContent", ImVec2(0, ImGui::GetContentRegionAvail().y - ImGui::GetFrameHeightWithSpacing()), false)) {
                 DrawCategoryList();
             }
