@@ -7,3 +7,4 @@ ConstructorInitializerAllOnOneLineOrOnePerLine: true
 NamespaceIndentation: All
 IndentCaseLabels: true
 AllowShortCaseLabelsOnASingleLine: true
+AllowShortIfStatementsOnASingleLine: WithoutElse

@@ -31,6 +31,7 @@ cmake --build build --config Release
 - [x] Address Watcher
 - [x] Module List
 - [x] PE Viewer
+- [x] Kernel Mode
 - [ ] Process Dumper
 - [ ] String Scanner/Viewer
 - [ ] Code cave scanner
