@@ -310,6 +310,29 @@ void DisassemblyPane::DrawDisassembly()
                 if (ImGui::RoundedMenuItem("Assemble", m_KeybindManger.GetKeybindString("Assemble").c_str())) {
                     m_ModalManager.OpenModal("Assemble");
                 }
+                if (ImGui::BeginRoundedMenu("Change Page Protection")) {
+                    MEMORY_BASIC_INFORMATION mbi = m_State.Process->Query(address).value_or({});
+
+                    if (ImGui::RoundedMenuItem("PAGE_NOACCESS", nullptr, mbi.Protect & PAGE_NOACCESS)) {
+                        (void)m_State.Process->Protect(address, 0x1000, PAGE_NOACCESS);
+                    }
+                    if (ImGui::RoundedMenuItem("PAGE_READONLY", nullptr, mbi.Protect & PAGE_READONLY)) {
+                        (void)m_State.Process->Protect(address, 0x1000, PAGE_READONLY);
+                    }
+                    if (ImGui::RoundedMenuItem("PAGE_READWRITE", nullptr, mbi.Protect & PAGE_READWRITE)) {
+                        (void)m_State.Process->Protect(address, 0x1000, PAGE_READWRITE);
+                    }
+                    if (ImGui::RoundedMenuItem("PAGE_EXECUTE", nullptr, mbi.Protect & PAGE_EXECUTE)) {
+                        (void)m_State.Process->Protect(address, 0x1000, PAGE_EXECUTE);
+                    }
+                    if (ImGui::RoundedMenuItem("PAGE_EXECUTE_READ", nullptr, mbi.Protect & PAGE_EXECUTE_READ)) {
+                        (void)m_State.Process->Protect(address, 0x1000, PAGE_EXECUTE_READ);
+                    }
+                    if (ImGui::RoundedMenuItem("PAGE_EXECUTE_READWRITE", nullptr, mbi.Protect & PAGE_EXECUTE_READWRITE)) {
+                        (void)m_State.Process->Protect(address, 0x1000, PAGE_EXECUTE_READWRITE);
+                    }
+                    ImGui::EndMenu();
+                }
                 ImGui::EndPopup();
             }
         }
