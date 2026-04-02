@@ -1,5 +1,7 @@
 #include "ComboSetting.h"
 
+#include <CheatStengine/UI/ImGui/Menu.h>
+
 #include <imgui.h>
 
 void ComboSetting::Draw()
@@ -11,7 +13,7 @@ void ComboSetting::Draw()
     if (ImGui::BeginCombo(m_Name.c_str(), m_Items[m_TempItem].c_str())) {
         for (int i = 0; i < m_Items.size(); ++i) {
             bool isSelected = (m_TempItem == i);
-            if (ImGui::Selectable(m_Items[i].c_str(), isSelected)) {
+            if (ImGui::RoundedMenuItem(m_Items[i].c_str(), nullptr, isSelected)) {
                 m_TempItem = i;
             }
             if (isSelected) {

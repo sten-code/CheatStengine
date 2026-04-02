@@ -2,6 +2,8 @@
 
 #include "Setting.h"
 
+#include <CheatStengine/UI/ImGui/Menu.h>
+
 #include <imgui.h>
 
 #define DEFINE_ENUM_SETTING(EnumType, ...)                                                      \
@@ -75,7 +77,7 @@ public:
         if (ImGui::BeginCombo(m_Name.c_str(), items[currentIndex].second)) {
             for (size_t i = 0; i < items.size(); ++i) {
                 bool isSelected = (currentIndex == static_cast<int>(i));
-                if (ImGui::Selectable(items[i].second, isSelected)) {
+                if (ImGui::RoundedMenuItem(items[i].second, nullptr, isSelected)) {
                     m_TempValue = items[i].first;
                 }
                 if (isSelected) {

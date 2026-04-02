@@ -54,6 +54,7 @@ MainLayer::MainLayer(Window& window)
     AddPane<PEViewer>(m_State);
     StructDissectPane& structDissectPane = AddPane<StructDissectPane>(m_State, m_ModalManager, m_KeybindManager);
 
+    // Generate settings for keybinds
     SettingsCategory& keybindsSettings = m_SettingsManager.AddCategory("Keybinds");
     std::vector<std::string> keybindCategories = m_KeybindManager.GetCategories();
     for (const std::string& category : keybindCategories) {
