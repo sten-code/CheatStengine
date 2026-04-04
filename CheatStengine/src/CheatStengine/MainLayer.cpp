@@ -71,12 +71,12 @@ MainLayer::MainLayer(Window& window)
     m_State.Process = Process::Create("RobloxPlayerBeta.exe", m_ProcessModeSetting->GetValue());
 
     // Add some default dissections for Roblox
-    if (AddressEvaluator::Result result = AddressEvaluator::Evaluate("robloxplayerbeta.exe+0x795A0D8", *m_State.Process);
+    if (AddressEvaluator::Result result = AddressEvaluator::Evaluate("robloxplayerbeta.exe+0x834A988", *m_State.Process);
         !result.IsError()) {
         structDissectPane.AddDissection("FakeDataModel", result.Value);
     }
 
-    if (AddressEvaluator::Result result = AddressEvaluator::Evaluate("robloxplayerbeta.exe+0x7A08710", *m_State.Process);
+    if (AddressEvaluator::Result result = AddressEvaluator::Evaluate("robloxplayerbeta.exe+0x8428188", *m_State.Process);
         !result.IsError()) {
         structDissectPane.AddDissection("RawScheduler", result.Value);
     }
