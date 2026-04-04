@@ -331,6 +331,10 @@ void DisassemblyPane::DrawDisassembly()
                     if (ImGui::RoundedMenuItem("PAGE_EXECUTE_READWRITE", nullptr, mbi.Protect & PAGE_EXECUTE_READWRITE)) {
                         (void)m_State.Process->Protect(address, 0x1000, PAGE_EXECUTE_READWRITE);
                     }
+                    if (ImGui::RoundedMenuItem("PAGE_EXECUTE_WRITECOPY", nullptr, mbi.Protect & PAGE_EXECUTE_WRITECOPY)) {
+                        (void)m_State.Process->Protect(address, 0x1000, PAGE_EXECUTE_WRITECOPY);
+                    }
+
                     ImGui::EndMenu();
                 }
                 ImGui::EndPopup();
