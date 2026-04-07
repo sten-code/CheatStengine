@@ -1,5 +1,7 @@
 #include "PEViewer.h"
 
+#include <CheatStengine/AddressEvaluator/Error.h>
+#include <CheatStengine/AddressEvaluator/Evaluator.h>
 #include <CheatStengine/UI/ImGui/Fonts.h>
 #include <IconsMaterialDesignIcons.h>
 #include <imgui.h>
@@ -14,58 +16,27 @@ PEViewer::PEViewer(State& state)
 
 void PEViewer::Draw(double deltaTime)
 {
-    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2 { 0.0f, 0.0f });
     ImGui::Begin(m_Name.c_str(), &m_Open);
-    ImGui::PopStyleVar();
 
-    if (ImGui::BeginTable("AddressWatchTable", 2, ImGuiTableFlags_Resizable | ImGuiTableFlags_BordersV | ImGuiTableFlags_BordersOuterH | ImGuiTableFlags_ScrollY)) {
-        ImGui::TableNextRow();
-
-        ImGui::TableSetColumnIndex(0);
-        DrawModuleList();
-
-        ImGui::TableSetColumnIndex(1);
-        DrawTabBar();
-
-        ImGui::EndTable();
+    ImGui::InputTextWithHint("##Address", "Address...", &m_AddressInput);
+    ImGui::SameLine();
+    if (ImGui::Button("Go")) {
+        INFO("Evaluating address: {}", m_AddressInput.c_str());
+        AddressEvaluator::Result result = AddressEvaluator::Evaluate(m_AddressInput, *m_State.Process);
+        if (!result.IsError()) {
+            INFO("Value: 0x{:X}", result.Value);
+            m_CurrentAddress = result.Value;
+        }
     }
+
+    DrawTabBar();
 
     ImGui::End();
 }
 
-void PEViewer::DrawModuleList()
-{
-    ImGui::PushItemWidth(-1);
-    ImGui::InputTextWithHint("##Search", "Search modules...", &m_SearchQuery);
-    ImGui::PopItemWidth();
-
-    ImGui::BeginChild("PEViewerModuleList");
-
-    std::string queryLower = m_SearchQuery;
-    std::ranges::transform(queryLower, queryLower.begin(), ::tolower);
-
-    for (size_t i = 0; i < m_State.Modules.size(); ++i) {
-        const MODULEENTRY32& entry = m_State.Modules[i];
-        std::string moduleNameLower = entry.szModule;
-        std::ranges::transform(moduleNameLower, moduleNameLower.begin(), ::tolower);
-
-        // Skip modules that don't match the search query
-        if (!queryLower.empty() && moduleNameLower.find(queryLower) == std::string::npos) {
-            continue;
-        }
-
-        bool isSelected = (m_SelectedIndex == i);
-        if (ImGui::Selectable(entry.szModule, isSelected)) {
-            m_SelectedIndex = i;
-        }
-    }
-
-    ImGui::EndChild();
-}
-
 void PEViewer::DrawTabBar()
 {
-    if (m_SelectedIndex == -1) {
+    if (m_CurrentAddress == 0) {
         ImGui::BeginChild("PEViewerEmptyState");
         ImGui::Text("Select a module to view its PE headers.");
         ImGui::EndChild();
@@ -280,9 +251,8 @@ static void DrawOptionalHeader(const T& optionalHeader)
 
 void PEViewer::DrawHeadersTab()
 {
-    const MODULEENTRY32& entry = m_State.Modules[m_SelectedIndex];
-    IMAGE_DOS_HEADER dosHeader = m_State.Process->Read<IMAGE_DOS_HEADER>(reinterpret_cast<uintptr_t>(entry.modBaseAddr));
-    uintptr_t ntAddr = reinterpret_cast<uintptr_t>(entry.modBaseAddr) + dosHeader.e_lfanew;
+    IMAGE_DOS_HEADER dosHeader = m_State.Process->Read<IMAGE_DOS_HEADER>(m_CurrentAddress);
+    uintptr_t ntAddr = m_CurrentAddress + dosHeader.e_lfanew;
 
     DWORD ntSignature = m_State.Process->Read<DWORD>(ntAddr);
     WORD optionalMagic = m_State.Process->Read<WORD>(ntAddr + sizeof(DWORD) + sizeof(IMAGE_FILE_HEADER));
@@ -539,7 +509,7 @@ void PEViewer::DrawDataDirectories(const IMAGE_DATA_DIRECTORY* dataDirectories)
             ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.5f, 0.5f, 0.5f, 1.0f));
         }
 
-        bool isSelected = (m_SelectedDirectory == static_cast<int>(i));
+        bool isSelected = (m_SelectedDirectory == i);
         if (ImGui::Selectable(std::format("{}##{}", directoryInfo[i].name, i).c_str(), isSelected)) {
             m_SelectedDirectory = i;
         }
@@ -565,9 +535,9 @@ void PEViewer::DrawDataDirectories(const IMAGE_DATA_DIRECTORY* dataDirectories)
 
 void PEViewer::DrawDataDirectoriesTab()
 {
-    const MODULEENTRY32& entry = m_State.Modules[m_SelectedIndex];
-    IMAGE_DOS_HEADER dosHeader = m_State.Process->Read<IMAGE_DOS_HEADER>(reinterpret_cast<uintptr_t>(entry.modBaseAddr));
-    uintptr_t ntAddr = reinterpret_cast<uintptr_t>(entry.modBaseAddr) + dosHeader.e_lfanew;
+    // const MODULEENTRY32& entry = m_State.Modules[m_SelectedIndex];
+    IMAGE_DOS_HEADER dosHeader = m_State.Process->Read<IMAGE_DOS_HEADER>(m_CurrentAddress);
+    uintptr_t ntAddr = m_CurrentAddress + dosHeader.e_lfanew;
 
     WORD optionalMagic = m_State.Process->Read<WORD>(ntAddr + sizeof(DWORD) + sizeof(IMAGE_FILE_HEADER));
     bool is32 = (optionalMagic == IMAGE_NT_OPTIONAL_HDR32_MAGIC);
@@ -599,7 +569,7 @@ void PEViewer::DrawDataDirectoriesTab()
         DrawDataDirectories(dataDirectories);
 
         ImGui::TableSetColumnIndex(1);
-        if (m_SelectedDirectory >= 0 && m_SelectedDirectory < numberOfRvaAndSizes) {
+        if (m_SelectedDirectory != -1 && m_SelectedDirectory < numberOfRvaAndSizes) {
             DrawDirectoryDetails(dataDirectories[m_SelectedDirectory], m_SelectedDirectory, is32);
         } else {
             ImGui::BeginChild("DataDirectoryEmptyState");
@@ -624,8 +594,7 @@ void PEViewer::DrawDirectoryDetails(const IMAGE_DATA_DIRECTORY& dir, DWORD index
         return;
     }
 
-    const MODULEENTRY32& entry = m_State.Modules[m_SelectedIndex];
-    uintptr_t baseAddress = reinterpret_cast<uintptr_t>(entry.modBaseAddr);
+    uintptr_t baseAddress = m_CurrentAddress;
     uintptr_t directoryAddress = baseAddress + dir.VirtualAddress;
 
     ImGui::BeginChild("DirectoryDetails");
@@ -997,9 +966,8 @@ void PEViewer::DrawTLSDirectory(uintptr_t baseAddress, const IMAGE_DATA_DIRECTOR
 
 void PEViewer::DrawSectionsTab()
 {
-    const MODULEENTRY32& entry = m_State.Modules[m_SelectedIndex];
-    IMAGE_DOS_HEADER dosHeader = m_State.Process->Read<IMAGE_DOS_HEADER>(reinterpret_cast<uintptr_t>(entry.modBaseAddr));
-    uintptr_t ntAddr = reinterpret_cast<uintptr_t>(entry.modBaseAddr) + dosHeader.e_lfanew;
+    IMAGE_DOS_HEADER dosHeader = m_State.Process->Read<IMAGE_DOS_HEADER>(m_CurrentAddress);
+    uintptr_t ntAddr = m_CurrentAddress + dosHeader.e_lfanew;
 
     WORD optionalMagic = m_State.Process->Read<WORD>(ntAddr + sizeof(DWORD) + sizeof(IMAGE_FILE_HEADER));
     bool is32 = (optionalMagic == IMAGE_NT_OPTIONAL_HDR32_MAGIC);
@@ -1062,7 +1030,7 @@ void PEViewer::DrawSectionsTab()
                 continue;
             }
 
-            bool isSelected = (m_SelectedSection == static_cast<int>(i));
+            bool isSelected = (m_SelectedSection == i);
 
             if (section.Characteristics & IMAGE_SCN_MEM_EXECUTE) {
                 ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.8f, 0.6f, 0.2f, 1.0f)); // Orange for executable
@@ -1073,7 +1041,7 @@ void PEViewer::DrawSectionsTab()
             }
 
             if (ImGui::Selectable(std::format("{}##{}", sectionName, i).c_str(), isSelected)) {
-                m_SelectedSection = static_cast<int>(i);
+                m_SelectedSection = i;
             }
 
             ImGui::SameLine();
@@ -1087,7 +1055,7 @@ void PEViewer::DrawSectionsTab()
         ImGui::EndChild();
 
         ImGui::TableSetColumnIndex(1);
-        if (m_SelectedSection >= 0 && m_SelectedSection < static_cast<int>(sections.size())) {
+        if (m_SelectedSection != -1 && m_SelectedSection < sections.size()) {
             const IMAGE_SECTION_HEADER& selectedSection = sections[m_SelectedSection];
             DrawSectionDetails(selectedSection, imageBase);
         } else {

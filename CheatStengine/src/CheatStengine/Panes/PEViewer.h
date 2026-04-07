@@ -9,7 +9,6 @@ public:
     void Draw(double deltaTime) override;
 
 private:
-    void DrawModuleList();
     void DrawTabBar();
 
     void DrawHeadersTab();
@@ -27,9 +26,11 @@ private:
     void DrawSectionDetails(const IMAGE_SECTION_HEADER& section, uintptr_t imageBase);
 
 private:
-    size_t m_SelectedIndex = -1;
-    int m_SelectedDirectory = -1;
-    int m_SelectedSection = -1;
-    std::string m_SearchQuery;
+    std::string m_AddressInput;
+    uintptr_t m_CurrentAddress = 0;
+
+    size_t m_SelectedDirectory = -1;
+    size_t m_SelectedSection = -1;
     std::string m_SectionSearchQuery;
+
 };
