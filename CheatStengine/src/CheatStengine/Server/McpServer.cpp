@@ -12,7 +12,7 @@
 
 namespace Server {
 
-    static constexpr const char* kProtocolVersion = "0.1.45";
+    static constexpr const char* kProtocolVersion = "2025-06-18";
 
     McpServer::McpServer() = default;
 
@@ -327,10 +327,25 @@ namespace Server {
         }
 
         std::string sessionId = m_Sessions.Create(clientName, clientVersion);
-        INFO("MCP client initialized: {} {} (session {})", clientName, clientVersion, sessionId.substr(0, 8));
+
+        // MCP spec: echo the client's requested protocol if we support it,
+        // otherwise return our latest and let the client decide.
+        static constexpr const char* kSupported[] = {
+            "2025-06-18", "2025-03-26", "2024-11-05"
+        };
+        std::string negotiated = kProtocolVersion; // our latest as default
+        if (params.contains("protocolVersion")) {
+            std::string requested = params["protocolVersion"].get<std::string>();
+            for (const char* v : kSupported) {
+                if (requested == v) { negotiated = requested; break; }
+            }
+        }
+
+        INFO("MCP client initialized: {} {} (session {}), protocol {}",
+             clientName, clientVersion, sessionId.substr(0, 8), negotiated);
 
         return {
-            { "protocolVersion", kProtocolVersion },
+            { "protocolVersion", negotiated },
             { "capabilities", { { "tools", nlohmann::json::object() } } },
             { "serverInfo", { { "name", "CheatStengine" }, { "version", "0.1.0" } } },
             { "sessionId", sessionId },
