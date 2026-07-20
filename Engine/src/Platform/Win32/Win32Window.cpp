@@ -412,11 +412,11 @@ void Win32Window::CreateWindow(const WindowProps& props)
         throw std::runtime_error("Failed to create window");
     }
 
-    if (HICON large = LoadAppIcon(::GetSystemMetrics(SM_CXICON))) {
-        ::SendMessage(m_Hwnd, WM_SETICON, ICON_BIG, reinterpret_cast<LPARAM>(large));
+    if (HICON largeIcon = LoadAppIcon(::GetSystemMetrics(SM_CXICON))) {
+        ::SendMessage(m_Hwnd, WM_SETICON, ICON_BIG, reinterpret_cast<LPARAM>(largeIcon));
     }
-    if (HICON small = LoadAppIcon(::GetSystemMetrics(SM_CXSMICON))) {
-        ::SendMessage(m_Hwnd, WM_SETICON, ICON_SMALL, reinterpret_cast<LPARAM>(small));
+    if (HICON smallIcon = LoadAppIcon(::GetSystemMetrics(SM_CXSMICON))) {
+        ::SendMessage(m_Hwnd, WM_SETICON, ICON_SMALL, reinterpret_cast<LPARAM>(smallIcon));
     }
 
     ::ShowWindow(m_Hwnd, SW_SHOWNA);
