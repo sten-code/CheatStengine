@@ -62,6 +62,8 @@ private:
     void CreateWindow(const WindowProps& props);
     void ProcessEvents();
 
+    static HICON LoadAppIcon(int size);
+
 private:
     HWND m_Hwnd = nullptr;
     HINSTANCE m_Instance = nullptr;

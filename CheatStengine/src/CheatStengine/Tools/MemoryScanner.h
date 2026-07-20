@@ -4,6 +4,7 @@
 
 #include <Windows.h>
 
+#include <atomic>
 #include <cstdint>
 #include <mutex>
 #include <string>
@@ -108,5 +109,7 @@ private:
 
     std::vector<ScannedAddress> m_CurrentResults;
     std::mutex m_Mutex;
-    bool m_Scanning = false;
+    // Written on the detached scan thread, read from the main/HTTP thread; atomic
+    // so those accesses aren't a data race.
+    std::atomic<bool> m_Scanning = false;
 };

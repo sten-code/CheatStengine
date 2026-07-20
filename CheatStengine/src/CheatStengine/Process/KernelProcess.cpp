@@ -1,6 +1,9 @@
 #include "KernelProcess.h"
 
 #include <Engine/Core/Log.h>
+
+#include <winioctl.h>
+
 #include <unordered_set>
 
 #define IOCTL_CS_COMMAND CTL_CODE(FILE_DEVICE_UNKNOWN, 0x6969, METHOD_BUFFERED, FILE_ANY_ACCESS)

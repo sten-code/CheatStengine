@@ -6,3 +6,12 @@
 
 # Dependency directories
 */vendor/*/
+
+# Local scratch / persona files (not part of the tool)
+nyx_core.txt
+nyx_style.txt
+nyx_injector.bat
+logs/
+
+# Local editor / agent settings
+.claude/settings.local.json
