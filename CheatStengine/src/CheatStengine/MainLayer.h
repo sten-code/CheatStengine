@@ -3,8 +3,12 @@
 #include <CheatStengine/Core/KeybindManager.h>
 #include <CheatStengine/Core/ModalManager.h>
 #include <CheatStengine/Panes/Pane.h>
+#include <CheatStengine/Process/Monitor.h>
+#include <CheatStengine/Server/McpServer.h>
 #include <CheatStengine/Settings/EnumSetting.h>
 #include <CheatStengine/Settings/SettingsManager.h>
+#include <CheatStengine/Settings/ToggleSetting.h>
+#include <CheatStengine/UI/ImGui/IconCache.h>
 #include <CheatStengine/UI/MenuBar.h>
 #include <CheatStengine/UI/TitleBar.h>
 #include <Engine/Core/Layers/Layer.h>
@@ -15,6 +19,7 @@ public:
     ~MainLayer() override = default;
 
     void OnAttach() override;
+    void OnDetach() override;
     void OnUpdate(float deltaTime) override;
     void OnImGuiRender() override;
     void OnImGuiRenderDock() override;
@@ -41,7 +46,14 @@ private:
     void DrawOpenProcessList();
     void DrawOpenWindowList();
 
+    // Draws a 16px row icon (or a blank same-size spacer when texture is 0) and
+    // advances the cursor so the following Selectable sits beside it.
+    static void DrawRowIcon(uint64_t texture);
+
     void SettingsModal(const std::string& name, const std::any& payload);
+
+    // Draws the extra MCP tab controls (live URL/token, Open Web, Install).
+    void DrawMcpControls();
 
 private:
     Window& m_Window;
@@ -52,16 +64,27 @@ private:
     // Managers
     ModalManager m_ModalManager;
     KeybindManager m_KeybindManager;
+    Monitor m_Monitor;
     SettingsManager m_SettingsManager;
 
     MenuBar m_MenuBar;
     TitleBar m_TitleBar;
+
+    // Agent-facing MCP control server. Owns its own listener thread; we only
+    // pump its command queue from OnUpdate so engine access stays on this thread.
+    Server::McpServer m_McpServer;
+
+    // Small cache of process/window shell icons for the selector. Bound to the
+    // D3D11 device in OnAttach and released in OnDetach.
+    IconCache m_IconCache;
 
     std::vector<PROCESSENTRY32> m_ProcessEntries;
     std::vector<Process::Window> m_WindowEntries;
 
     // Settings
     EnumSetting<ProcessMode>* m_ProcessModeSetting;
+    ToggleSetting* m_ServerEnabledSetting = nullptr;
+    ToggleSetting* m_RequireAuthSetting = nullptr;
 
     friend class MenuBar;
     friend class DisassemblyPane;

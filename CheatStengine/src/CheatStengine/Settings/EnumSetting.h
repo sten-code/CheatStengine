@@ -103,6 +103,7 @@ public:
     void Apply() override { m_Value = m_TempValue; }
 
     [[nodiscard]] EnumType GetValue() const { return m_Value; }
+    [[nodiscard]] EnumType GetPendingValue() const { return m_TempValue; }
     [[nodiscard]] const char* GetCurrentItemName() const { return EnumTraits<EnumType>::GetName(m_Value); }
 
     [[nodiscard]] std::string GetName() const override { return m_Name; }

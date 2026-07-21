@@ -364,6 +364,19 @@ void Win32Window::Init(const WindowProps& props)
     SetVSync(false);
 }
 
+HICON Win32Window::LoadAppIcon(int size)
+{
+    // The branded icon ships next to the executable under Resources/. Fall back
+    // to the stock application icon if it can't be loaded (e.g. running from a
+    // directory where Resources wasn't copied).
+    HICON icon = static_cast<HICON>(::LoadImage(
+        nullptr, "Resources/favicon.ico", IMAGE_ICON, size, size, LR_LOADFROMFILE));
+    if (!icon) {
+        icon = ::LoadIcon(nullptr, IDI_APPLICATION);
+    }
+    return icon;
+}
+
 void Win32Window::RegisterWindowClass() const
 {
     WNDCLASSEX wc = {};
@@ -371,10 +384,10 @@ void Win32Window::RegisterWindowClass() const
     wc.style = CS_HREDRAW | CS_VREDRAW | CS_OWNDC;
     wc.lpfnWndProc = WindowProc;
     wc.hInstance = m_Instance;
-    wc.hIcon = ::LoadIcon(nullptr, IDI_APPLICATION);
+    wc.hIcon = LoadAppIcon(::GetSystemMetrics(SM_CXICON));
     wc.hCursor = ::LoadCursor(nullptr, IDC_ARROW);
     wc.lpszClassName = "CECLASS";
-    wc.hIconSm = ::LoadIcon(nullptr, IDI_APPLICATION);
+    wc.hIconSm = LoadAppIcon(::GetSystemMetrics(SM_CXSMICON));
 
     if (!::RegisterClassEx(&wc)) {
         throw std::runtime_error("Failed to register window class");
@@ -397,6 +410,13 @@ void Win32Window::CreateWindow(const WindowProps& props)
 
     if (!m_Hwnd) {
         throw std::runtime_error("Failed to create window");
+    }
+
+    if (HICON largeIcon = LoadAppIcon(::GetSystemMetrics(SM_CXICON))) {
+        ::SendMessage(m_Hwnd, WM_SETICON, ICON_BIG, reinterpret_cast<LPARAM>(largeIcon));
+    }
+    if (HICON smallIcon = LoadAppIcon(::GetSystemMetrics(SM_CXSMICON))) {
+        ::SendMessage(m_Hwnd, WM_SETICON, ICON_SMALL, reinterpret_cast<LPARAM>(smallIcon));
     }
 
     ::ShowWindow(m_Hwnd, SW_SHOWNA);

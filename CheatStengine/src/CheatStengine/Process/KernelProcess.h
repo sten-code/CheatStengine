@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Device.h"
 #include "Process.h"
 
 class KernelProcess final : public Process {
@@ -9,7 +10,7 @@ public:
     ~KernelProcess() override;
 
     [[nodiscard]] uintptr_t Allocate(size_t size, uint32_t protection, uint32_t allocationType = MEM_COMMIT | MEM_RESERVE) const override;
-    bool Free(uintptr_t address, uint32_t freeType = MEM_DECOMMIT) const override;
+    bool Free(uintptr_t address, uint32_t freeType = MEM_RELEASE) const override;
 
     [[nodiscard]] std::optional<MEMORY_BASIC_INFORMATION> Query(uintptr_t address) const override;
     std::optional<uint32_t> Protect(uintptr_t address, size_t size, uint32_t protection) const override;
@@ -21,9 +22,10 @@ public:
     [[nodiscard]] std::vector<MODULEENTRY32> GetModuleEntries(bool refresh = false) const override;
 
     [[nodiscard]] std::string GetName() override;
-    [[nodiscard]] bool IsValid() const override { return Process::IsValid() && m_DeviceHandle != INVALID_HANDLE_VALUE; }
+    [[nodiscard]] bool IsValid() const override { return Process::IsValid() && m_Bound && m_Device.IsOpen(); }
 
 private:
-    HANDLE m_DeviceHandle = nullptr;
+    Device m_Device;
+    bool m_Bound = false;
     std::string m_Name;
 };

@@ -26,7 +26,7 @@ public:
     virtual ~Process() = default;
 
     [[nodiscard]] virtual uintptr_t Allocate(size_t size, uint32_t protection, uint32_t allocationType = MEM_COMMIT | MEM_RESERVE) const = 0;
-    virtual bool Free(uintptr_t address, uint32_t freeType = MEM_DECOMMIT) const = 0;
+    virtual bool Free(uintptr_t address, uint32_t freeType = MEM_RELEASE) const = 0;
 
     [[nodiscard]] virtual std::optional<MEMORY_BASIC_INFORMATION> Query(uintptr_t address) const = 0;
     virtual std::optional<uint32_t> Protect(uintptr_t address, size_t size, uint32_t protection) const = 0;
@@ -36,11 +36,7 @@ public:
 
     [[nodiscard]] virtual MODULEENTRY32 GetModuleEntry(std::string_view name) const = 0;
     [[nodiscard]] virtual std::vector<MODULEENTRY32> GetModuleEntries(bool refresh = false) const = 0;
-
     [[nodiscard]] virtual std::string GetName() = 0;
-
-    // Implemented methods that rely on the above virtual methods
-
     [[nodiscard]] bool IsAddressReadable(uintptr_t address) const;
 
     template <typename T>

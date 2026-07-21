@@ -10,7 +10,7 @@
 #include <imgui.h>
 #include <imgui_stdlib.h>
 
-#include <future>
+#include <limits>
 
 static const char* s_ScanTypeNames[] = {
     "Exact Value",
@@ -35,6 +35,35 @@ static const char* s_ValueTypeNames[] = {
 };
 static_assert(IM_ARRAYSIZE(s_ValueTypeNames) == static_cast<size_t>(ValueType::COUNT));
 
+static bool IsIntegerType(ValueType type)
+{
+    return type != ValueType::Float
+        && type != ValueType::Double
+        && type != ValueType::COUNT;
+}
+
+static std::string GetScanInput(const std::string& input, ValueType type, bool isHex)
+{
+    if (!isHex || !IsIntegerType(type)) {
+        return input;
+    }
+
+    const size_t first = input.find_first_not_of(" \t\r\n");
+    if (first == std::string::npos) {
+        return input;
+    }
+    const size_t last = input.find_last_not_of(" \t\r\n");
+    std::string value = input.substr(first, last - first + 1);
+    const size_t prefix = value.front() == '+' || value.front() == '-' ? 1 : 0;
+    if (value.size() >= prefix + 2
+        && value[prefix] == '0'
+        && (value[prefix + 1] == 'x' || value[prefix + 1] == 'X')) {
+        return value;
+    }
+    value.insert(prefix, "0x");
+    return value;
+}
+
 MemoryScannerPane::MemoryScannerPane(State& state)
     : Pane(ICON_MDI_RADAR " Memory Scanner", state)
 {
@@ -44,7 +73,32 @@ void MemoryScannerPane::Draw(double deltaTime)
 {
     ImGui::Begin(m_Name.c_str(), &m_Open);
 
-    ImGui::Text("Found %llu", m_Scanner ? m_Scanner->GetResults().size() : 0);
+    const uint32_t processId = m_State.Process && m_State.Process->IsValid()
+        ? m_State.Process->GetPid()
+        : 0;
+    if (processId != m_ProcessId) {
+        m_Scanner.reset();
+        m_ProcessId = processId;
+        m_ModuleFilter = ModuleFilter::Any;
+        m_SelectedModuleIndex = 0;
+        m_MinAddress = 0;
+        m_MaxAddress = 0x7FFFFFFFFFFF;
+    }
+    if (m_ModuleFilter == ModuleFilter::Specific
+        && (m_SelectedModuleIndex < 0
+            || static_cast<size_t>(m_SelectedModuleIndex) >= m_State.Modules.size())) {
+        m_ModuleFilter = ModuleFilter::Any;
+        m_SelectedModuleIndex = 0;
+        m_MinAddress = 0;
+        m_MaxAddress = 0x7FFFFFFFFFFF;
+    }
+
+    size_t resultCount = 0;
+    if (m_Scanner) {
+        std::lock_guard lock(m_Scanner->GetMutex());
+        resultCount = m_Scanner->GetResults().size();
+    }
+    ImGui::Text("Found %llu", static_cast<unsigned long long>(resultCount));
     if (ImGui::BeginTable("MemoryScannerView", 2, ImGuiTableFlags_Resizable)) {
         ImGui::TableNextRow();
         ImGui::TableSetColumnIndex(0);
@@ -104,17 +158,12 @@ void MemoryScannerPane::Draw(double deltaTime)
 
         ImGui::SetNextItemWidth(100.0f);
         if (m_Scanner) {
-            const bool isDisabled = m_Scanner->IsScanning();
-            if (isDisabled) {
-                ImGui::PushItemFlag(ImGuiItemFlags_Disabled, true);
-                ImGui::PushStyleVar(ImGuiStyleVar_Alpha, ImGui::GetStyle().Alpha * 0.5f);
-            }
-            if (ImGui::Button("New Scan", ImVec2 { 80.0f, 0.0f })) {
+            if (m_Scanner->IsScanning()) {
+                if (ImGui::Button("Cancel Scan", ImVec2 { 80.0f, 0.0f })) {
+                    m_Scanner->Cancel();
+                }
+            } else if (ImGui::Button("New Scan", ImVec2 { 80.0f, 0.0f })) {
                 m_Scanner.reset();
-            }
-            if (isDisabled) {
-                ImGui::PopStyleVar();
-                ImGui::PopItemFlag();
             }
         } else {
             if (ImGui::Button("First Scan", ImVec2 { 80.0f, 0.0f })) {
@@ -131,7 +180,9 @@ void MemoryScannerPane::Draw(double deltaTime)
 
         if (ImGui::Button("Next Scan", ImVec2 { 80.0f, 0.0f })) {
             if (m_Scanner) {
-                m_Scanner->NextScan(m_ValueType, m_ScanType, m_MinAddress, m_MaxAddress, m_ScanInputLower, m_ScanInputUpper);
+                const std::string lowerValue = GetScanInput(m_ScanInputLower, m_ValueType, m_IsInputHex);
+                const std::string upperValue = GetScanInput(m_ScanInputUpper, m_ValueType, m_IsInputHex);
+                m_Scanner->NextScan(m_ValueType, m_ScanType, m_MinAddress, m_MaxAddress, lowerValue, upperValue);
             }
         }
 
@@ -178,6 +229,9 @@ void MemoryScannerPane::Draw(double deltaTime)
             ImGui::EndCombo();
         }
 
+        if (m_Scanner) {
+            ImGui::BeginDisabled();
+        }
         if (ImGui::BeginCombo("Value Type", s_ValueTypeNames[static_cast<size_t>(m_ValueType)])) {
             for (size_t n = 0; n < IM_ARRAYSIZE(s_ValueTypeNames); n++) {
                 bool isSelected = (m_ValueType == static_cast<ValueType>(n));
@@ -189,6 +243,9 @@ void MemoryScannerPane::Draw(double deltaTime)
                 }
             }
             ImGui::EndCombo();
+        }
+        if (m_Scanner) {
+            ImGui::EndDisabled();
         }
 
         std::string comboLabel = (m_ModuleFilter == ModuleFilter::Any) ? "Any" : m_State.Modules[m_SelectedModuleIndex].szModule;
@@ -211,7 +268,10 @@ void MemoryScannerPane::Draw(double deltaTime)
                     m_ModuleFilter = ModuleFilter::Specific;
                     m_SelectedModuleIndex = i;
                     m_MinAddress = reinterpret_cast<uintptr_t>(m_State.Modules[i].modBaseAddr);
-                    m_MaxAddress = m_MinAddress + m_State.Modules[i].modBaseSize;
+                    const uintptr_t moduleSize = static_cast<uintptr_t>(m_State.Modules[i].modBaseSize);
+                    m_MaxAddress = moduleSize > std::numeric_limits<uintptr_t>::max() - m_MinAddress
+                        ? std::numeric_limits<uintptr_t>::max()
+                        : m_MinAddress + moduleSize;
                 }
                 if (isSelected) {
                     ImGui::SetItemDefaultFocus();
@@ -231,9 +291,16 @@ void MemoryScannerPane::Draw(double deltaTime)
 
 void MemoryScannerPane::StartFirstScan()
 {
+    if (!m_State.Process || !m_State.Process->IsValid()) {
+        ERR("Select a valid process before starting a memory scan");
+        return;
+    }
+
     INFO("Scanning...");
+    const std::string lowerValue = GetScanInput(m_ScanInputLower, m_ValueType, m_IsInputHex);
+    const std::string upperValue = GetScanInput(m_ScanInputUpper, m_ValueType, m_IsInputHex);
     m_Scanner = std::make_unique<MemoryScanner>(m_State.Process);
-    if (!m_Scanner->FirstScan(m_ValueType, m_ScanType, m_MinAddress, m_MaxAddress, m_ScanInputLower, m_ScanInputUpper)) {
+    if (!m_Scanner->FirstScan(m_ValueType, m_ScanType, m_MinAddress, m_MaxAddress, lowerValue, upperValue)) {
         m_Scanner = nullptr;
     }
 }

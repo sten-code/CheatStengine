@@ -35,6 +35,7 @@ private:
     uintptr_t m_MaxAddress = 0x7FFFFFFFFFFF;
     ModuleFilter m_ModuleFilter = ModuleFilter::Any;
     int m_SelectedModuleIndex = 0; // Index in the modules vector
+    uint32_t m_ProcessId = 0;
 
     // Scan Results
     std::unique_ptr<MemoryScanner> m_Scanner;
