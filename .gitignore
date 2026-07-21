@@ -1,5 +1,12 @@
-# Build directories
 /cmake-build-*/
 /build/
 /out/
 /.idea/
+.gitignore
+.vscode/
+nyx_core.txt
+nyx_injector.bat
+nyx_style.txt
+logs
+*.logs
+.*

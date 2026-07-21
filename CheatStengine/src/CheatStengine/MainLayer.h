@@ -3,6 +3,7 @@
 #include <CheatStengine/Core/KeybindManager.h>
 #include <CheatStengine/Core/ModalManager.h>
 #include <CheatStengine/Panes/Pane.h>
+#include <CheatStengine/Process/Monitor.h>
 #include <CheatStengine/Server/McpServer.h>
 #include <CheatStengine/Settings/EnumSetting.h>
 #include <CheatStengine/Settings/SettingsManager.h>
@@ -63,6 +64,7 @@ private:
     // Managers
     ModalManager m_ModalManager;
     KeybindManager m_KeybindManager;
+    Monitor m_Monitor;
     SettingsManager m_SettingsManager;
 
     MenuBar m_MenuBar;

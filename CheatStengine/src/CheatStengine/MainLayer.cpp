@@ -11,6 +11,7 @@
 #include <CheatStengine/Panes/StructDissectPane.h>
 #include <CheatStengine/Panes/WatchPane.h>
 #include <CheatStengine/Settings/ComboSetting.h>
+#include <CheatStengine/Settings/KernelSettings.h>
 #include <CheatStengine/Settings/McpControls.h>
 #include <CheatStengine/Settings/KeybindSetting.h>
 #include <CheatStengine/Settings/SliderSetting.h>
@@ -40,6 +41,9 @@ MainLayer::MainLayer(Window& window)
 {
     SettingsCategory& general = m_SettingsManager.AddCategory("General");
     m_ProcessModeSetting = general.AddSetting<EnumSetting<ProcessMode>>("Process Mode", "What should be used to interact with processes?", ProcessMode::WinAPI);
+    general.AddSetting<KernelSettings>("Kernel", m_Monitor, [this] {
+        return m_ProcessModeSetting->GetPendingValue() == ProcessMode::Kernel;
+    });
 
     // MCP control server settings. Auth is off by default so an agent connects
     // with just the URL; flip that on to require the bearer token. The toggle
@@ -114,6 +118,7 @@ void MainLayer::OnAttach()
 
 void MainLayer::OnDetach()
 {
+    m_Monitor.Stop();
     m_McpServer.Stop();
 
     // Release icon textures while the device is still alive.
@@ -122,6 +127,12 @@ void MainLayer::OnDetach()
 
 void MainLayer::OnUpdate(float deltaTime)
 {
+    if (m_ProcessModeSetting->GetValue() == ProcessMode::Kernel) {
+        m_Monitor.Start();
+    } else {
+        m_Monitor.Stop();
+    }
+
     // Run any tool work the server queued from its listener thread. Must happen
     // on this (main) thread before we touch State below.
     m_McpServer.DrainCommands();
@@ -396,4 +407,3 @@ void MainLayer::DrawMcpControls()
         ImGui::SetTooltip("Rewrite the MCP entries for Claude Code, Cursor, Claude Desktop, Codex and the skill.");
     }
 }
-

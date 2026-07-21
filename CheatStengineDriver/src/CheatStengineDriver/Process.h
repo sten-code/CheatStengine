@@ -1,42 +1,49 @@
 #pragma once
 
-#include <cstdint>
 #include <ntifs.h>
+
+void InitializeProcessSupport();
+bool CanProtectProcessMemory();
 
 NTSTATUS ReadProcessMemory(
     PEPROCESS process,
-    uintptr_t address,
-    void* buffer,
-    size_t size);
+    UINT64 address,
+    PVOID buffer,
+    SIZE_T size,
+    PSIZE_T bytesTransferred);
 
 NTSTATUS WriteProcessMemory(
     PEPROCESS process,
-    uintptr_t address,
-    void* buffer,
-    size_t size);
+    UINT64 address,
+    PVOID buffer,
+    SIZE_T size,
+    PSIZE_T bytesTransferred);
 
 NTSTATUS QueryProcessMemory(
     PEPROCESS process,
-    uintptr_t address,
-    PMEMORY_BASIC_INFORMATION mbi);
+    UINT64 address,
+    PMEMORY_BASIC_INFORMATION memoryInformation);
 
 NTSTATUS AllocateProcessMemory(
     PEPROCESS process,
-    uintptr_t address,
-    size_t size,
-    uint32_t allocationType,
-    uint32_t protect,
-    uintptr_t* outAddress);
+    UINT64 address,
+    UINT64 size,
+    ULONG allocationType,
+    ULONG protect,
+    PUINT64 allocatedAddress,
+    PUINT64 allocatedSize);
 
 NTSTATUS FreeProcessMemory(
     PEPROCESS process,
-    uintptr_t address,
-    size_t size,
-    uint32_t freeType);
+    UINT64 address,
+    UINT64 size,
+    ULONG freeType);
 
 NTSTATUS ProtectProcessMemory(
     PEPROCESS process,
-    uintptr_t address,
-    size_t size,
-    uint32_t newProtect,
-    uint32_t* oldProtect);
+    UINT64 address,
+    UINT64 size,
+    ULONG newProtect,
+    PULONG oldProtect,
+    PUINT64 protectedAddress,
+    PUINT64 protectedSize);

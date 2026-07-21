@@ -687,7 +687,9 @@ namespace Server {
                     if (context.Scanner->IsScanning()) {
                         Fail("a scan is already in progress");
                     }
-                    context.Scanner->NextScan(valueType, scanType, 0x0, 0x7FFFFFFFFFFF, value, upper);
+                    if (!context.Scanner->NextScan(valueType, scanType, 0x0, 0x7FFFFFFFFFFF, value, upper)) {
+                        Fail("failed to start scan refinement (invalid value or incompatible value type?)");
+                    }
                 } else {
                     if (context.Scanner && context.Scanner->IsScanning()) {
                         Fail("a scan is already in progress; poll scan_results until scanning=false");
@@ -739,7 +741,3 @@ namespace Server {
     }
 
 }
-
-
-
-

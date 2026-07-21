@@ -1,0 +1,63 @@
+[Version]
+Signature="$WINDOWS NT$"
+Class=System
+ClassGuid={4D36E97D-E325-11CE-BFC1-08002BE10318}
+Provider=%ProviderName%
+CatalogFile.NTamd64=Driver.cat
+DriverVer=07/21/2026,1.0.0.0
+PnpLockdown=1
+
+[Manufacturer]
+%ManufacturerName%=Models,NTamd64.10.0...19041
+
+[Models.NTamd64.10.0...19041]
+%DeviceName%=Device_Install,Root\CheatStengine
+
+[DestinationDirs]
+DriverCopyFiles=13
+
+[SourceDisksNames]
+1=%DiskName%,,,
+
+[SourceDisksFiles]
+CheatStengineDriver.sys=1
+
+[Device_Install.NT]
+CopyFiles=DriverCopyFiles
+
+[Device_Install.NT.HW]
+AddReg=DeviceSecurity
+
+[DeviceSecurity]
+HKR,,DeviceCharacteristics,0x00010001,0x00000100
+HKR,,Security,0x00000000,"D:P(A;;GA;;;SY)(A;;GA;;;BA)"
+
+[Device_Install.NT.Interfaces]
+AddInterface={8D3F3F2D-3D46-4A66-8F9B-46E6D5A67831},,Interface_Install
+
+[Interface_Install]
+AddReg=InterfaceSecurity
+
+[InterfaceSecurity]
+HKR,,Security,0x00000000,"D:P(A;;GA;;;SY)(A;;GA;;;BA)"
+
+[Device_Install.NT.Services]
+AddService=CheatStengineDriver,0x00000002,Service_Install
+
+[Service_Install]
+DisplayName=%ServiceName%
+ServiceType=1
+StartType=3
+ErrorControl=1
+ServiceBinary=%13%\CheatStengineDriver.sys
+Security="D:P(A;;GA;;;SY)(A;;GA;;;BA)"
+
+[DriverCopyFiles]
+CheatStengineDriver.sys
+
+[Strings]
+ProviderName="Cheat Stengine"
+ManufacturerName="Cheat Stengine"
+DeviceName="Cheat Stengine Device"
+ServiceName="Cheat Stengine Driver"
+DiskName="Cheat Stengine Installation Media"

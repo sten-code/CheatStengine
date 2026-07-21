@@ -1,232 +1,201 @@
-#include "process.h"
-#include "memory.h"
+#include "Process.h"
 
-#include <ntifs.h>
+#include "Memory.h"
 
-extern "C" NTSYSAPI NTSTATUS NTAPI ZwProtectVirtualMemory(
-    IN HANDLE ProcessHandle,
-    IN OUT PVOID* BaseAddress,
-    IN OUT PSIZE_T NumberOfBytesToProtect,
-    IN ULONG NewAccessProtection,
-    OUT PULONG OldAccessProtection);
+namespace {
 
-#define MIN(a, b) (((a) < (b)) ? (a) : (b))
+using ProtectRoutine = NTSTATUS (NTAPI*)(
+    HANDLE,
+    PVOID*,
+    PSIZE_T,
+    ULONG,
+    PULONG);
 
-NTSTATUS ReadProcessMemory(PEPROCESS process, uintptr_t address, void* buffer, size_t size)
+PVOID volatile ProtectAddress = nullptr;
+
+bool IsNativeSize(UINT64 size)
 {
-    DbgPrint("[CheatStengine] ReadProcessMemory  addr=0x%p  size=%zu\n",
-        reinterpret_cast<void*>(address), size);
-
-    if (!buffer || size == 0) {
-        return STATUS_INVALID_PARAMETER;
-    }
-
-    if (!IsValidUserModeAddress(address, size)) {
-        DbgPrint("[CheatStengine] ReadProcessMemory: Invalid user mode address 0x%p\n",
-            reinterpret_cast<void*>(address));
-        return STATUS_ACCESS_VIOLATION;
-    }
-
-    const UINT64 dtb = GetProcessCr3(process);
-    if (IsPageNoAccess(dtb, address)) {
-        DbgPrint("[CheatStengine] ReadProcessMemory: Address 0x%p is marked as PAGE_NOACCESS\n",
-            reinterpret_cast<void*>(address));
-        return STATUS_ACCESS_DENIED;
-    }
-
-    const UINT64 physAddr = TranslateLinear(dtb, address);
-    if (!physAddr) {
-        DbgPrint("[CheatStengine] ReadProcessMemory: Failed to translate linear address 0x%p\n",
-            reinterpret_cast<void*>(address));
-        return STATUS_UNSUCCESSFUL;
-    }
-
-    // Clamp to the end of the current physical page.
-    const ULONG64 chunk = MIN(PAGE_SIZE - static_cast<INT32>(physAddr & 0xFFF), size);
-    SIZE_T bytesRead = 0;
-    NTSTATUS status = PhysRead(reinterpret_cast<PVOID>(physAddr), buffer, chunk, &bytesRead);
-    if (!NT_SUCCESS(status)) {
-        DbgPrint("[CheatStengine] PhysRead failed: 0x%08X\n", status);
-    }
-    return status;
+    return size <= static_cast<UINT64>(MAXULONG_PTR);
 }
 
-NTSTATUS WriteProcessMemory(PEPROCESS process, uintptr_t address, void* buffer, size_t size)
+bool IsUserAddress(UINT64 address)
 {
-    DbgPrint("[CheatStengine] WriteProcessMemory  addr=0x%p  size=%zu\n",
-        reinterpret_cast<void*>(address), size);
-
-    if (!buffer || size == 0) {
-        return STATUS_INVALID_PARAMETER;
-    }
-
-    if (!IsValidUserModeAddress(address, size)) {
-        return STATUS_ACCESS_VIOLATION;
-    }
-
-    const UINT64 dtb = GetProcessCr3(process);
-    if (IsPageNoAccess(dtb, address)) {
-        return STATUS_ACCESS_DENIED;
-    }
-
-    const UINT64 physAddr = TranslateLinear(dtb, address);
-    if (!physAddr) {
-        return STATUS_UNSUCCESSFUL;
-    }
-
-    const ULONG64 chunk = MIN(PAGE_SIZE - static_cast<INT32>(physAddr & 0xFFF), size);
-    SIZE_T bytesWritten = 0;
-    NTSTATUS status = PhysWrite(reinterpret_cast<PVOID>(physAddr), buffer, chunk, &bytesWritten);
-    if (!NT_SUCCESS(status)) {
-        DbgPrint("[CheatStengine] PhysWrite failed: 0x%08X\n", status);
-    }
-    return status;
+    return address <= reinterpret_cast<UINT64>(MmHighestUserAddress);
 }
 
-NTSTATUS QueryProcessMemory(PEPROCESS process, uintptr_t address, MEMORY_BASIC_INFORMATION* mbi)
-{
-    DbgPrint("[CheatStengine] QueryProcessMemory  addr=0x%p, mbi=0x%p\n",
-        reinterpret_cast<void*>(address), reinterpret_cast<void*>(mbi));
+}
 
-    if (!process || !mbi) {
+void InitializeProcessSupport()
+{
+    UNICODE_STRING routineName = RTL_CONSTANT_STRING(L"ZwProtectVirtualMemory");
+    PVOID routine = MmGetSystemRoutineAddress(&routineName);
+    InterlockedExchangePointer(&ProtectAddress, routine);
+}
+
+bool CanProtectProcessMemory()
+{
+    return InterlockedCompareExchangePointer(&ProtectAddress, nullptr, nullptr) != nullptr;
+}
+
+NTSTATUS ReadProcessMemory(
+    PEPROCESS process,
+    UINT64 address,
+    PVOID buffer,
+    SIZE_T size,
+    PSIZE_T bytesTransferred)
+{
+    return ReadProcessAddressSpace(process, address, buffer, size, bytesTransferred);
+}
+
+NTSTATUS WriteProcessMemory(
+    PEPROCESS process,
+    UINT64 address,
+    PVOID buffer,
+    SIZE_T size,
+    PSIZE_T bytesTransferred)
+{
+    return WriteProcessAddressSpace(process, address, buffer, size, bytesTransferred);
+}
+
+NTSTATUS QueryProcessMemory(
+    PEPROCESS process,
+    UINT64 address,
+    PMEMORY_BASIC_INFORMATION memoryInformation)
+{
+    if (!process || !memoryInformation || !IsUserAddress(address)) {
         return STATUS_INVALID_PARAMETER;
     }
-
-    if (!IsValidUserModeAddress(address, 1)) {
-        DbgPrint("[CheatStengine] QueryProcessMemory: Invalid user mode address 0x%p\n",
-            reinterpret_cast<void*>(address));
-        return STATUS_ACCESS_VIOLATION;
+    if (KeGetCurrentIrql() != PASSIVE_LEVEL) {
+        return STATUS_INVALID_DEVICE_STATE;
     }
 
     NTSTATUS status = STATUS_SUCCESS;
-
     KAPC_STATE apcState {};
     KeStackAttachProcess(process, &apcState);
-    __try {
-        SIZE_T returnLength = 0;
-
-        status = ZwQueryVirtualMemory(
-            ZwCurrentProcess(),
-            reinterpret_cast<PVOID>(address),
-            MemoryBasicInformation,
-            mbi,
-            sizeof(MEMORY_BASIC_INFORMATION),
-            &returnLength);
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        status = GetExceptionCode();
-        DbgPrint("[CheatStengine] Exception in QueryProcessMemory: 0x%08X\n", status);
-    }
+    SIZE_T returnLength = 0;
+    status = ZwQueryVirtualMemory(
+        ZwCurrentProcess(),
+        reinterpret_cast<PVOID>(address),
+        MemoryBasicInformation,
+        memoryInformation,
+        sizeof(*memoryInformation),
+        &returnLength);
     KeUnstackDetachProcess(&apcState);
-
-    DbgPrint("[CheatStengine] ZwQueryVirtualMemory returned 0x%08X, BaseAddress=0x%p, RegionSize=0x%p, State=0x%X, Protect=0x%X, Type=0x%X\n",
-        status, mbi->BaseAddress, reinterpret_cast<void*>(mbi->RegionSize), mbi->State, mbi->Protect, mbi->Type);
-
-    if (!NT_SUCCESS(status)) {
-        DbgPrint("[CheatStengine] ZwQueryVirtualMemory failed: 0x%08X\n", status);
-    }
     return status;
 }
 
-NTSTATUS AllocateProcessMemory(PEPROCESS process, uintptr_t address, size_t size,
-    uint32_t allocationType, uint32_t protect,
-    uintptr_t* outAddress)
+NTSTATUS AllocateProcessMemory(
+    PEPROCESS process,
+    UINT64 address,
+    UINT64 size,
+    ULONG allocationType,
+    ULONG protect,
+    PUINT64 allocatedAddress,
+    PUINT64 allocatedSize)
 {
-    if (!process || !outAddress || size == 0)
+    if (!process || !allocatedAddress || !allocatedSize || size == 0
+        || !IsNativeSize(size)
+        || (address != 0 && !IsUserAddressRange(address, size))) {
         return STATUS_INVALID_PARAMETER;
+    }
+    if (KeGetCurrentIrql() != PASSIVE_LEVEL) {
+        return STATUS_INVALID_DEVICE_STATE;
+    }
 
     NTSTATUS status = STATUS_SUCCESS;
     PVOID baseAddress = reinterpret_cast<PVOID>(address);
-    SIZE_T regionSize = size;
-
+    SIZE_T regionSize = static_cast<SIZE_T>(size);
     KAPC_STATE apcState {};
     KeStackAttachProcess(process, &apcState);
-    __try {
-        status = ZwAllocateVirtualMemory(
-            ZwCurrentProcess(),
-            &baseAddress,
-            0,
-            &regionSize,
-            allocationType,
-            protect);
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        status = GetExceptionCode();
-        DbgPrint("[CheatStengine] Exception in AllocateProcessMemory: 0x%08X\n", status);
-    }
+    status = ZwAllocateVirtualMemory(
+        ZwCurrentProcess(),
+        &baseAddress,
+        0,
+        &regionSize,
+        allocationType,
+        protect);
     KeUnstackDetachProcess(&apcState);
 
     if (NT_SUCCESS(status)) {
-        *outAddress = reinterpret_cast<uintptr_t>(baseAddress);
-    } else {
-        DbgPrint("[CheatStengine] ZwAllocateVirtualMemory failed: 0x%08X\n", status);
+        *allocatedAddress = reinterpret_cast<UINT64>(baseAddress);
+        *allocatedSize = regionSize;
     }
     return status;
 }
 
-NTSTATUS FreeProcessMemory(PEPROCESS process, uintptr_t address, size_t size, uint32_t freeType)
+NTSTATUS FreeProcessMemory(
+    PEPROCESS process,
+    UINT64 address,
+    UINT64 size,
+    ULONG freeType)
 {
-    if (!process || address == 0) {
+    const bool release = freeType == MEM_RELEASE && size == 0;
+    const bool decommit = freeType == MEM_DECOMMIT
+        && size != 0
+        && IsUserAddressRange(address, size);
+    if (!process || address == 0 || !IsNativeSize(size) || (!release && !decommit)
+        || !IsUserAddress(address)) {
         return STATUS_INVALID_PARAMETER;
+    }
+    if (KeGetCurrentIrql() != PASSIVE_LEVEL) {
+        return STATUS_INVALID_DEVICE_STATE;
     }
 
     NTSTATUS status = STATUS_SUCCESS;
     PVOID baseAddress = reinterpret_cast<PVOID>(address);
-    SIZE_T regionSize = size;
-
+    SIZE_T regionSize = static_cast<SIZE_T>(size);
     KAPC_STATE apcState {};
     KeStackAttachProcess(process, &apcState);
-    __try {
-        status = ZwFreeVirtualMemory(
-            ZwCurrentProcess(),
-            &baseAddress,
-            &regionSize,
-            freeType);
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        status = GetExceptionCode();
-        DbgPrint("[CheatStengine] Exception in FreeProcessMemory: 0x%08X\n", status);
-    }
+    status = ZwFreeVirtualMemory(
+        ZwCurrentProcess(),
+        &baseAddress,
+        &regionSize,
+        freeType);
     KeUnstackDetachProcess(&apcState);
-
-    if (!NT_SUCCESS(status)) {
-        DbgPrint("[CheatStengine] ZwFreeVirtualMemory failed: 0x%08X\n", status);
-    }
     return status;
 }
 
-NTSTATUS ProtectProcessMemory(PEPROCESS process, uintptr_t address, size_t size,
-    uint32_t newProtect, uint32_t* oldProtect)
+NTSTATUS ProtectProcessMemory(
+    PEPROCESS process,
+    UINT64 address,
+    UINT64 size,
+    ULONG newProtect,
+    PULONG oldProtect,
+    PUINT64 protectedAddress,
+    PUINT64 protectedSize)
 {
-    if (!process || address == 0 || size == 0 || !oldProtect) {
+    if (!process || !oldProtect || !protectedAddress || !protectedSize
+        || !IsNativeSize(size) || !IsUserAddressRange(address, size)) {
         return STATUS_INVALID_PARAMETER;
     }
+    if (KeGetCurrentIrql() != PASSIVE_LEVEL) {
+        return STATUS_INVALID_DEVICE_STATE;
+    }
 
-    if (!IsValidUserModeAddress(address, size)) {
-        return STATUS_ACCESS_VIOLATION;
+    const auto protectRoutine = reinterpret_cast<ProtectRoutine>(
+        InterlockedCompareExchangePointer(&ProtectAddress, nullptr, nullptr));
+    if (!protectRoutine) {
+        return STATUS_NOT_SUPPORTED;
     }
 
     NTSTATUS status = STATUS_SUCCESS;
-    ULONG oldProtectValue = 0;
-
+    PVOID baseAddress = reinterpret_cast<PVOID>(address);
+    SIZE_T regionSize = static_cast<SIZE_T>(size);
+    ULONG previousProtect = 0;
     KAPC_STATE apcState {};
     KeStackAttachProcess(process, &apcState);
-    __try {
-        status = ZwProtectVirtualMemory(
-            ZwCurrentProcess(),
-            reinterpret_cast<PVOID*>(&address),
-            &size,
-            newProtect,
-            &oldProtectValue);
-
-        if (NT_SUCCESS(status)) {
-            *oldProtect = oldProtectValue;
-        }
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        status = GetExceptionCode();
-        DbgPrint("[CheatStengine] Exception in ProtectProcessMemory: 0x%08X\n", status);
-    }
+    status = protectRoutine(
+        ZwCurrentProcess(),
+        &baseAddress,
+        &regionSize,
+        newProtect,
+        &previousProtect);
     KeUnstackDetachProcess(&apcState);
 
-    if (!NT_SUCCESS(status)) {
-        DbgPrint("[CheatStengine] ZwProtectVirtualMemory failed: 0x%08X\n", status);
+    if (NT_SUCCESS(status)) {
+        *oldProtect = previousProtect;
+        *protectedAddress = reinterpret_cast<UINT64>(baseAddress);
+        *protectedSize = regionSize;
     }
     return status;
 }

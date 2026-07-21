@@ -130,8 +130,6 @@ uint64_t IconCache::CreateTextureFromIcon(HICON icon)
         return 0;
     }
 
-    // Swap B and R (GDI gives BGRA, D3D wants RGBA) while checking whether the
-    // colour bitmap carried any real alpha.
     bool hasAlpha = false;
     for (uint32_t& pixel : pixels) {
         if (pixel & 0xFF000000) {
@@ -141,10 +139,6 @@ uint64_t IconCache::CreateTextureFromIcon(HICON icon)
         uint32_t r = (pixel & 0x00FF0000) >> 16;
         pixel = (pixel & 0xFF00FF00) | (b << 16) | r;
     }
-
-    // Legacy icons store no per-pixel alpha; transparency lives in the AND mask
-    // (a set bit means transparent). Without this, such icons decode to alpha 0
-    // everywhere and render fully invisible. Rebuild alpha from the mask.
     if (!hasAlpha) {
         std::vector<uint32_t> mask(static_cast<size_t>(width) * height);
         if (GetDIBits(screenDc, iconInfo.hbmMask, 0, height, mask.data(), &bmi, DIB_RGB_COLORS) != 0) {
@@ -153,7 +147,6 @@ uint64_t IconCache::CreateTextureFromIcon(HICON icon)
                 pixels[i] = transparent ? (pixels[i] & 0x00FFFFFF) : (pixels[i] | 0xFF000000);
             }
         } else {
-            // Mask unreadable: make the icon opaque rather than invisible.
             for (uint32_t& pixel : pixels) {
                 pixel |= 0xFF000000;
             }

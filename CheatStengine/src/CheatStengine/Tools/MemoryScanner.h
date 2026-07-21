@@ -6,8 +6,10 @@
 
 #include <atomic>
 #include <cstdint>
+#include <cstring>
 #include <mutex>
 #include <string>
+#include <thread>
 #include <variant>
 #include <vector>
 
@@ -68,26 +70,24 @@ enum class ScanType {
 
 class MemoryScanner {
 public:
-    explicit MemoryScanner(const std::unique_ptr<Process>& proc)
-        : m_Process(proc)
-    {
-        m_CurrentResults.reserve(100000);
-    }
+    explicit MemoryScanner(const std::unique_ptr<Process>& process);
 
     bool FirstScan(ValueType valueType, ScanType scanType,
         uintptr_t minAddress,
         uintptr_t maxAddress,
         const std::string& lowerValue = "",
         const std::string& upperValue = "");
-    void NextScan(ValueType valueType, ScanType scanType,
+    bool NextScan(ValueType valueType, ScanType scanType,
         uintptr_t minAddress,
         uintptr_t maxAddress,
         const std::string& lowerValue = "",
         const std::string& upperValue = "");
+    void Cancel();
 
     [[nodiscard]] const std::vector<ScannedAddress>& GetResults() const { return m_CurrentResults; }
     [[nodiscard]] std::mutex& GetMutex() { return m_Mutex; }
     [[nodiscard]] bool IsScanning() const { return m_Scanning; }
+    [[nodiscard]] uint32_t GetProcessId() const { return m_Process ? m_Process->GetPid() : 0; }
 
 private:
     template <typename T>
@@ -98,18 +98,19 @@ private:
         return bytes;
     }
     static bool CompareValues(ScanType scanType, const ScanValue& value, const ScanValue& targetValue1, const ScanValue& targetValue2);
-    static bool CompareByteArrays(ScanType scanType, ValueType valueType, uint8_t* data, const std::vector<uint8_t>& target1, const std::vector<uint8_t>& target2);
+    static bool CompareByteArrays(ScanType scanType, ValueType valueType, const uint8_t* data, const std::vector<uint8_t>& target1, const std::vector<uint8_t>& target2);
 
     static std::vector<uint8_t> StringToBytes(const std::string& str, ValueType type);
     static ScanValue StringToValue(const std::string& str, ValueType type);
     static bool IsValidMemoryRegion(const MEMORY_BASIC_INFORMATION& memInfo);
 
 private:
-    const std::unique_ptr<Process>& m_Process;
+    std::unique_ptr<Process> m_Process;
 
     std::vector<ScannedAddress> m_CurrentResults;
     std::mutex m_Mutex;
-    // Written on the detached scan thread, read from the main/HTTP thread; atomic
-    // so those accesses aren't a data race.
+    std::mutex m_ThreadMutex;
+    std::atomic<ValueType> m_ValueType = ValueType::COUNT;
     std::atomic<bool> m_Scanning = false;
+    std::jthread m_ScanThread;
 };

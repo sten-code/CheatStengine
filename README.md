@@ -10,9 +10,8 @@ features for reverse engineering, debugging, memory analysis, and game hacking.
 > [!WARNING]
 > Cheat Stengine is still in the very early stages of development. Many features are not yet implemented, and the tool
 > may be unstable. Expect bugs, crashes, and breaking changes between versions.
-
-> [!NOTE]
-> If you're on an AMD chipset, you might face some issues. If you do, please copy the generated dump file and create an issue
+>
+> If you're on an AMD, you might face some issues. If you do, please copy the generated dump file and create an issue
 > with any relevant information that could help us reproduce the problem.
 >
 > We are not responsible for individual data loss, system instability, or other issues caused by using Cheat Stengine.
@@ -33,26 +32,19 @@ cmake --build build --config Release
 
 ## MCP Server
 
-Cheat Stengine ships with a built-in MCP server so an AI agent can drive the
+Cheat Stengine comes with a built-in MCP server so an AI agent can drive the
 engine: list and attach processes, read/write and scan memory, disassemble,
-assemble, dissect structs, and generate byte signatures.
+assemble, dissect structs, and generate byte signatures
 
-The server starts automatically on launch, binds to loopback, and prints its
-URL and bearer token to the log. Open the **MCP** tab in Settings
+The server starts automatically on launch
+To configure open the **MCP** tab in Settings
 (`Ctrl+,`) to:
 
-* toggle the server on or off,
-* require the bearer token (off by default, since the loopback bind is the
-  gate),
-* copy the endpoint and token,
-* open the web dashboard and configuration pages, and
+* toggle the server on or off
+* require the bearer token (off by default)
+* copy the endpoint and token
 * reinstall the client configs for Claude Code, Cursor, Claude Desktop, Codex
-  and the skill.
-
-The dashboard (served at the printed URL) shows live sessions, jobs and the
-tool catalogue, and lets you enable or disable individual tools. The
-configuration page at `/config.html` manages the connection and install
-targets.
+  and the skill(optional but saves you around 100 tokens by explaining the ai how tools work) 
 
 ## Features
 
@@ -80,11 +72,3 @@ targets.
 * [ ] Handle Viewer
 * [ ] Plugin System
 * [ ] DBVM
-
-## Development
-
-Cheat Stengine is under active development. Features marked as incomplete are planned or currently being worked on.
-The project is still experimental, so functionality and APIs may change as development progresses.
-
-Bug reports and contributions are welcome. If you encounter a crash, please include relevant logs or dump files when
-creating an issue.
